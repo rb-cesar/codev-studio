@@ -5,7 +5,7 @@ import android.util.Log;
 import android.content.Context;
 import android.content.ContentResolver;
 
-import android.support.v4.provider.DocumentFile;
+import androidx.documentfile.provider.DocumentFile;
 
 import org.apache.cordova.PluginResult;
 import org.json.JSONException;

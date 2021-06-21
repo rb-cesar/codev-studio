@@ -646,7 +646,7 @@ public class InAppBrowser extends CordovaPlugin {
 
         if (features != null) {
             String bg = features.get(BACKGROUND);
-            if(bg != null){
+            if (bg != null) {
                 background = bg.toUpperCase();
             }
             String show = features.get(LOCATION);
@@ -796,6 +796,47 @@ public class InAppBrowser extends CordovaPlugin {
                 });
 
                 return _close;
+            }
+
+            private View fullscreenButton(int id) {
+                View fullscreen;
+                Resources activityRes = cordova.getActivity().getResources();
+
+                ImageButton button = new ImageButton(cordova.getActivity());
+                int closeResId = activityRes.getIdentifier("ic_action_remove", "drawable",
+                        cordova.getActivity().getPackageName());
+                Drawable closeIcon = activityRes.getDrawable(closeResId);
+                if (closeButtonColor != "")
+                    button.setColorFilter(android.graphics.Color.parseColor(closeButtonColor));
+                button.setImageDrawable(closeIcon);
+                button.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                if (Build.VERSION.SDK_INT >= 16)
+                    button.getAdjustViewBounds();
+
+                fullscreen = button;
+
+                RelativeLayout.LayoutParams closeLayoutParams = new RelativeLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                if (leftToRight)
+                    closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                else
+                    closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                fullscreen.setLayoutParams(closeLayoutParams);
+
+                if (Build.VERSION.SDK_INT >= 16)
+                    fullscreen.setBackground(null);
+                else
+                    fullscreen.setBackgroundDrawable(null);
+
+                fullscreen.setContentDescription("Close Button");
+                fullscreen.setId(Integer.valueOf(id));
+                fullscreen.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        closeDialog();
+                    }
+                });
+
+                return fullscreen;
             }
 
             @SuppressLint("NewApi")
@@ -960,9 +1001,9 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView = new WebView(cordova.getActivity());
                 inAppWebView.setLayoutParams(
                         new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-                
-                if(background != null){
-                    LOG.d(LOG_TAG, "background: "+background);
+
+                if (background != null) {
+                    LOG.d(LOG_TAG, "background: " + background);
                     inAppWebView.setBackgroundColor(Color.parseColor(background));
                 }
                 inAppWebView.setId(Integer.valueOf(6));

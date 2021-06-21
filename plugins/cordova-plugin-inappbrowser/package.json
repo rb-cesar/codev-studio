@@ -1,28 +1,4 @@
 {
-  "_from": "cordova-plugin-inappbrowser@3.1.0",
-  "_id": "cordova-plugin-inappbrowser@3.1.0",
-  "_inBundle": false,
-  "_integrity": "sha512-YqrZfYgbGTS20SFID0mrRxud312VH072QVlFonCAkPgtGg1Svy7lELOCNFd+KU7t4mVtZeTEjZPEeefvjaetwQ==",
-  "_location": "/cordova-plugin-inappbrowser",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "version",
-    "registry": true,
-    "raw": "cordova-plugin-inappbrowser@3.1.0",
-    "name": "cordova-plugin-inappbrowser",
-    "escapedName": "cordova-plugin-inappbrowser",
-    "rawSpec": "3.1.0",
-    "saveSpec": null,
-    "fetchSpec": "3.1.0"
-  },
-  "_requiredBy": [
-    "#USER",
-    "/"
-  ],
-  "_resolved": "https://registry.npmjs.org/cordova-plugin-inappbrowser/-/cordova-plugin-inappbrowser-3.1.0.tgz",
-  "_shasum": "61520b8de3eb75b37842d2340f5d90a84a073747",
-  "_spec": "cordova-plugin-inappbrowser@3.1.0",
-  "_where": "/media/dellevenjack/Projects/git/Acode",
   "author": {
     "name": "Apache Software Foundation"
   },
@@ -33,11 +9,7 @@
   "cordova": {
     "id": "cordova-plugin-inappbrowser",
     "platforms": [
-      "android",
-      "browser",
-      "ios",
-      "osx",
-      "windows"
+      "android"
     ]
   },
   "deprecated": false,
@@ -51,16 +23,7 @@
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-standard": "^3.0.1"
   },
-  "engines": {
-    "cordovaDependencies": {
-      "0.2.3": {
-        "cordova": ">=3.1.0"
-      },
-      "4.0.0": {
-        "cordova": ">100"
-      }
-    }
-  },
+  "engines": {},
   "homepage": "https://github.com/apache/cordova-plugin-inappbrowser#readme",
   "keywords": [
     "cordova",
@@ -69,21 +32,13 @@
     "browser",
     "inappbrowser",
     "ecosystem:cordova",
-    "cordova-android",
-    "cordova-browser",
-    "cordova-ios",
-    "cordova-osx",
-    "cordova-windows"
+    "cordova-android"
   ],
   "license": "Apache-2.0",
   "name": "cordova-plugin-inappbrowser",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/apache/cordova-plugin-inappbrowser.git"
-  },
-  "scripts": {
-    "eslint": "node node_modules/eslint/bin/eslint www && node node_modules/eslint/bin/eslint src && node node_modules/eslint/bin/eslint tests",
-    "test": "npm run eslint"
   },
   "types": "./types/index.d.ts",
   "version": "3.1.0"
