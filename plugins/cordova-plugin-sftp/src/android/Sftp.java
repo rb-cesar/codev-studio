@@ -10,6 +10,7 @@ import com.sshtools.client.SshClient;
 import com.sshtools.common.publickey.InvalidPassphraseException;
 import com.sshtools.common.publickey.SshKeyUtils;
 import com.sshtools.common.ssh.SshException;
+import com.sshtools.common.util.FileUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -17,6 +18,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.SecurityException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,6 +39,7 @@ public class Sftp extends CordovaPlugin {
   private CallbackContext callback;
   private Context context;
   private Activity activity;
+  private String connectionID;
 
   public void initialize(CordovaInterface cordova, CordovaWebView webView) {
     super.initialize(cordova, webView);
@@ -127,20 +132,16 @@ public class Sftp extends CordovaPlugin {
     try {
       ssh = new SshClient(host, port, username, password.toCharArray());
       if (ssh.isConnected()) {
+        connectionID = username + "@" + host;
         callback.success();
+        Log.d("connectUsingPassword", "Connected successfully");
         return;
       }
 
       callback.error("Cannot connect");
-    } catch (SshException e) {
-      callback.error(e.getMessage());
+    } catch (SshException | IOException e) {
+      callback.error(errMessage(e));
       Log.e("connectUsingPassword", "Cannot connect", e);
-    } catch (IOException e) {
-      callback.error(e.getMessage());
-      Log.e("connectUsingPassword", "Cannot connect", e);
-    } catch (Error e) {
-      callback.error(e.getMessage());
-      Log.e("connectUsingKeyFile", "Cannot connect", e);
     }
   }
 
@@ -169,22 +170,19 @@ public class Sftp extends CordovaPlugin {
         );
 
       if (ssh.isConnected()) {
+        connectionID = username + "@" + host;
         callback.success();
         return;
       }
 
       callback.error("Cannot connect");
-    } catch (InvalidPassphraseException e) {
-      callback.error(e.getMessage());
-      Log.e("connectUsingKeyFile", "Cannot connect", e);
-    } catch (SshException e) {
-      callback.error(e.getMessage());
-      Log.e("connectUsingKeyFile", "Cannot connect", e);
-    } catch (IOException e) {
-      callback.error(e.getMessage());
-      Log.e("connectUsingKeyFile", "Cannot connect", e);
-    } catch (SecurityException e) {
-      callback.error(e.getMessage());
+    } catch (
+      InvalidPassphraseException
+      | SshException
+      | IOException
+      | SecurityException e
+    ) {
+      callback.error(errMessage(e));
       Log.e("connectUsingKeyFile", "Cannot connect", e);
     }
   }
@@ -192,41 +190,50 @@ public class Sftp extends CordovaPlugin {
   private void exec(String command) {
     try {
       if (ssh != null) {
-        String res = ssh.executeCommand(command);
+        JSONObject res = new JSONObject();
+        StringBuffer buffer = new StringBuffer();
+        int code = ssh.executeCommandWithResult(command, buffer);
+        String result = buffer.toString();
+        res.put("code", code);
+        res.put("result", result);
         callback.success(res);
+        return;
       }
       callback.error("Not connected");
-    } catch (IOException e) {
-      callback.error(e.getMessage());
-      Log.e("execCommand", "Cannot execute command", e);
+    } catch (IOException | JSONException e) {
+      callback.error(errMessage(e));
     }
   }
 
   private void getFile(String filename, String localFilename) {
     try {
       if (ssh != null) {
-        File file = new File(localFilename);
+        URI uri = new URI(localFilename);
+        File file = new File(uri);
+        file.createNewFile();
         ssh.getFile(filename, file);
         callback.success();
         return;
       }
+      Log.d("getFile", "ssh is null");
       callback.error("Not connected");
-    } catch (IOException e) {
-      callback.error(e.getMessage());
+    } catch (IOException | URISyntaxException e) {
+      callback.error(errMessage(e));
     }
   }
 
   private void putFile(String filename, String localFilename) {
     try {
       if (ssh != null) {
-        File file = new File(localFilename);
+        URI uri = new URI(localFilename);
+        File file = new File(uri);
         ssh.putFile(file, filename);
         callback.success();
         return;
       }
       callback.error("Not connected");
-    } catch (IOException e) {
-      callback.error(e.getMessage());
+    } catch (IOException | URISyntaxException e) {
+      callback.error(errMessage(e));
     }
   }
 
@@ -239,13 +246,13 @@ public class Sftp extends CordovaPlugin {
       }
       callback.error("Not connected");
     } catch (IOException e) {
-      callback.error(e.getMessage());
+      callback.error(errMessage(e));
     }
   }
 
   private void isConnected() {
     if (ssh != null && ssh.isConnected()) {
-      callback.success(1);
+      callback.success(connectionID);
       return;
     }
 
@@ -266,5 +273,14 @@ public class Sftp extends CordovaPlugin {
     } catch (JSONException e) {
       return 0;
     }
+  }
+
+  private String errMessage(Exception e) {
+    String res = e.getMessage();
+    if (res == null || res.equals("")) {
+      return e.toString();
+    }
+
+    return res;
   }
 }

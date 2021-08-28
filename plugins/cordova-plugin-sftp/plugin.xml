@@ -5,7 +5,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android" id="cordova-plugin-sftp" version="1.1.1">
     <name>Sftp</name>
     <description>Cordova Sftp Plugin</description>
-    <license>Apache 2.0</license>
+    <license>MIT</license>
     <keywords>cordova,ftp</keywords>
     <repo>https://github.com/foxdebug/cordova-plugin-sftp.git</repo>
 

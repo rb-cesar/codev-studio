@@ -12,6 +12,11 @@ interface Stats {
   uri: string;
 }
 
+interface ExecResult{
+  code: Number;
+  result: String;
+}
+
 interface Sftp {
   /**
    * Executes command on ssh-server
@@ -19,7 +24,7 @@ interface Sftp {
    * @param onSucess 
    * @param onFail 
    */
-  exec(command: String, onSucess: (res: String)=>void, onFail: (err: any) => void): void;
+  exec(command: String, onSucess: (res: ExecResult)=>void, onFail: (err: any) => void): void;
   /**
    * Connects to SFTP server
    * @param host Hostname of the server
@@ -73,7 +78,7 @@ interface Sftp {
    * @param onSuccess 
    * @param onFail 
    */
-  isConnected(onSuccess: (connected: Boolean) => void, onFail: (err: any) => void): void;
+  isConnected(onSuccess: (connectionId: String) => void, onFail: (err: any) => void): void;
 }
 
 declare var sftp: Sftp;
