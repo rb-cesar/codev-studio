@@ -10,15 +10,24 @@
     <clobbers target="window.system" />
   </js-module>
   <platform name="android">
+
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="System">
         <param name="android-package" value="com.foxdebug.System"/>
       </feature>
     </config-file>
+  
     <config-file target="AndroidManifest.xml" parent="./application">
       <provider android:name="androidx.core.content.FileProvider" android:authorities="com.foxdebug.provider" android:exported="false" android:grantUriPermissions="true">
         <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_provider"/>
       </provider>
+    </config-file>
+
+    
+    <config-file parent="./application/activity" target="AndroidManifest.xml">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN"/>
+        </intent-filter>
     </config-file>
 
     <hook type="before_prepare" src="utils/resetProvider.js" />
@@ -29,6 +38,7 @@
     <config-file target="AndroidManifest.xml" parent="/manifest"></config-file>
 
     <framework src="commons-io:commons-io:2.11.0" />
-    <framework src="androidx.core:core:1.5.0" />
+    <framework src="androidx.core:core:1.6.0" />
+    <framework src="androidx.core:core-google-shortcuts:1.0.0" />
   </platform>
 </plugin>

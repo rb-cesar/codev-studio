@@ -1,39 +1,44 @@
 package com.foxdebug;
 
 import android.app.Activity;
-
-import android.content.Intent;
+import android.app.PendingIntent;
 import android.content.Context;
-
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.Bitmap;
+import android.graphics.ImageDecoder;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
-
-import android.util.Log;
+import android.provider.MediaStore.Images.Media;
 import android.webkit.WebView;
-import android.net.Uri;
-
 import androidx.core.content.FileProvider;
-
-import android.content.pm.PackageManager;
-import android.content.pm.PackageInfo;
-import android.content.pm.ApplicationInfo;
-
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
+import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.PluginResult;
 import org.apache.cordova.CordovaInterface;
+import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
-
+import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Method;
-import java.io.File;
-
 public class System extends CordovaPlugin {
+
   private Activity activity;
   private Context context;
+  private CallbackContext callback;
 
   public void initialize(CordovaInterface cordova, CordovaWebView webView) {
     super.initialize(cordova, webView);
@@ -41,52 +46,84 @@ public class System extends CordovaPlugin {
     this.activity = cordova.getActivity();
   }
 
-  public boolean execute(String action, final JSONArray args, final CallbackContext callbackContext)
-      throws JSONException {
+  public boolean execute(
+    String action,
+    final JSONArray args,
+    final CallbackContext callbackContext
+  )
+    throws JSONException {
+    this.callback = callbackContext;
 
-    if (action.equals("get-webkit-info")) {
-      this.getWebkitInfo(callbackContext);
-      return true;
-    } else if (action.equals("clear-cache")) {
-      this.clearCache(callbackContext);
-      return true;
-    } else if (action.equals("share-file")) {
-      this.shareFile(args.getString(0), args.getString(1), callbackContext);
-      return true;
-    } else if (action.equals("share-via-whatsapp")) {
-      this.shareViaWhatsapp(args.getString(0), args.getString(1), args.getString(2), callbackContext);
-      return true;
-    } else if (action.equals("send-email")) {
-      this.sendEmail(args.getString(0), args.getString(1), args.getString(2), args.getString(3), callbackContext);
-      return true;
-    } else if (action.equals("is-powersave-mode")) {
-      this.isPowerSaveMode(callbackContext);
-      return true;
-    } else if (action.equals("convert-uri-to-content-schema")) {
-      try {
-        Uri uri = this.getContentProviderUri(args.getString(0));
-        callbackContext.success(uri.toString());
-      } catch (Exception e) {
-        callbackContext.error(e.getMessage());
-      }
-      return true;
-    } else if (action.equals("get-app-info")) {
-      this.getAppInfo(callbackContext);
-      return true;
-    } else if (action.equals("close-app")) {
-      int API = Build.VERSION.SDK_INT;
+    final String arg1 = getJSONValueString(args, 0);
+    final String arg2 = getJSONValueString(args, 1);
+    final String arg3 = getJSONValueString(args, 2);
+    final String arg4 = getJSONValueString(args, 3);
+    final String arg5 = getJSONValueString(args, 4);
 
-      if (API >= 21) {
-        this.activity.finishAndRemoveTask();
-      } else {
-        this.activity.finish();
-      }
-      return true;
+    switch (action) {
+      case "get-webkit-info":
+      case "clear-cache":
+        cordova
+          .getActivity()
+          .runOnUiThread(
+            new Runnable() {
+              public void run() {
+                clearCache();
+              }
+            }
+          );
+        break;
+      case "share-file":
+      case "is-powersave-mode":
+      case "get-app-info":
+      case "add-shortcut":
+      case "remove-shortcut":
+      case "pin-shortcut":
+        break;
+      default:
+        return false;
     }
-    return false;
+
+    cordova
+      .getThreadPool()
+      .execute(
+        new Runnable() {
+          public void run() {
+            switch (action) {
+              case "get-webkit-info":
+                getWebkitInfo();
+                break;
+              case "clear-cache":
+                break;
+              case "share-file":
+                shareFile(arg1, arg2);
+                break;
+              case "is-powersave-mode":
+                isPowerSaveMode();
+                break;
+              case "get-app-info":
+                getAppInfo();
+                break;
+              case "add-shortcut":
+                addShortcut(arg1, arg2, arg3, arg4, arg5);
+                break;
+              case "remove-shortcut":
+                removeShortcut(arg1);
+                break;
+              case "pin-shortcut":
+                pinShortcut(arg1);
+                break;
+              default:
+                break;
+            }
+          }
+        }
+      );
+
+    return true;
   }
 
-  private void getWebkitInfo(CallbackContext callbackContext) throws JSONException {
+  private void getWebkitInfo() {
     PackageInfo info = null;
     JSONObject res = new JSONObject();
 
@@ -98,12 +135,12 @@ public class System extends CordovaPlugin {
         Method method = webViewFactory.getMethod("getLoadedPackageInfo");
         info = (PackageInfo) method.invoke(null);
       } else {
-        PackageManager packageManager = this.cordova.getActivity().getPackageManager();
+        PackageManager packageManager = activity.getPackageManager();
 
         try {
           info = packageManager.getPackageInfo("com.google.android.webview", 0);
         } catch (PackageManager.NameNotFoundException e) {
-          callbackContext.error("Package not found");
+          callback.error("Package not found");
         }
 
         return;
@@ -113,147 +150,158 @@ public class System extends CordovaPlugin {
       res.put("versionName", info.versionName);
       res.put("versionCode", info.versionCode);
 
-      callbackContext.success(res);
-    } catch (Exception e) {
-      callbackContext.error("Cannot determine current WebView engine. (" + e.getMessage() + ")");
+      callback.success(res);
+    } catch (
+      JSONException
+      | InvocationTargetException
+      | ClassNotFoundException
+      | NoSuchMethodException
+      | IllegalAccessException e
+    ) {
+      callback.error(
+        "Cannot determine current WebView engine. (" + e.getMessage() + ")"
+      );
 
       return;
     }
   }
 
-  private void clearCache(CallbackContext callbackContext) {
-    final String LOG_TAG = "CacheClear";
-    final String MESSAGE_TASK = "Cordova Android CacheClear() called.";
-    final String MESSAGE_ERROR = "Error while clearing webview cache.";
-    final System self = this;
-    final CallbackContext callback = callbackContext;
-
-    cordova.getActivity().runOnUiThread(new Runnable() {
-      public void run() {
-        try {
-          self.webView.clearCache(true);
-          PluginResult result = new PluginResult(PluginResult.Status.OK);
-          result.setKeepCallback(false);
-          callback.sendPluginResult(result);
-        } catch (Exception e) {
-          Log.e(LOG_TAG, MESSAGE_ERROR);
-          PluginResult result = new PluginResult(PluginResult.Status.ERROR, MESSAGE_ERROR);
-          result.setKeepCallback(false);
-          callback.sendPluginResult(result);
-        }
-      }
-    });
+  private void clearCache() {
+    try {
+      webView.clearCache(true);
+      callback.success();
+    } catch (Exception e) {
+      callback.error(e.toString());
+    }
   }
 
-  private void isPowerSaveMode(CallbackContext callbackContext) {
-    PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+  private void isPowerSaveMode() {
+    PowerManager powerManager = (PowerManager) context.getSystemService(
+      Context.POWER_SERVICE
+    );
     boolean powerSaveMode = powerManager.isPowerSaveMode();
 
-    callbackContext.success(powerSaveMode ? 1 : 0);
+    callback.success(powerSaveMode ? 1 : 0);
   }
 
-  private void shareFile(final String fileURI, final String filename, final CallbackContext callbackContext) {
-    final Activity activity = this.activity;
-    final Context context = this.context;
-    final Uri uri = this.getContentProviderUri(fileURI);
-    cordova.getThreadPool().execute(new Runnable() {
-      public void run() {
-        try {
-          Intent intent = new Intent(Intent.ACTION_SEND);
-          intent.putExtra(Intent.EXTRA_STREAM, uri);
-          if (!filename.equals(""))
-            intent.putExtra(Intent.EXTRA_TEXT, filename);
-          intent.setType("application/octet-stream");
-          activity.startActivity(intent);
-          callbackContext.success(uri.toString());
-        } catch (Exception e) {
-          callbackContext.error(e.getMessage());
-        }
-      }
-    });
+  private void shareFile(String fileURI, String filename) {
+    Activity activity = this.activity;
+    Context context = this.context;
+    Uri uri = this.getContentProviderUri(fileURI);
+    try {
+      Intent intent = new Intent(Intent.ACTION_SEND);
+      intent.putExtra(Intent.EXTRA_STREAM, uri);
+      if (!filename.equals("")) intent.putExtra(Intent.EXTRA_TEXT, filename);
+      intent.setType("application/octet-stream");
+      activity.startActivity(intent);
+      callback.success(uri.toString());
+    } catch (Exception e) {
+      callback.error(e.getMessage());
+    }
   }
 
-  private void shareViaWhatsapp(final String fileURI, final String contact, final String countryCode,
-      final CallbackContext callbackContext) {
-    final Activity activity = this.activity;
-    final Context context = this.context;
-    final PackageManager pm = context.getPackageManager();
-    final Uri uri = this.getContentProviderUri(fileURI);
-    cordova.getThreadPool().execute(new Runnable() {
-      public void run() {
-        try {
+  private void getAppInfo() {
+    JSONObject res = new JSONObject();
+    try {
+      PackageManager pm = activity.getPackageManager();
+      PackageInfo pInfo = pm.getPackageInfo(context.getPackageName(), 0);
+      ApplicationInfo appInfo = context.getApplicationInfo();
 
-          String packageName = "com.whatsapp";
+      res.put("firstInstallTime", pInfo.firstInstallTime);
+      res.put("lastUpdateTime", pInfo.lastUpdateTime);
+      res.put("label", appInfo.loadLabel(pm).toString());
+      res.put("packageName", pInfo.packageName);
+      res.put("versionName", pInfo.versionName);
+      res.put("versionCode", pInfo.getLongVersionCode());
 
-          if (!isPackageInstalled(packageName, pm)) {
-            packageName = "com.whatsapp.w4b";
-          }
-
-          Intent intent = new Intent("android.intent.action.MAIN");
-          intent.setAction(Intent.ACTION_SEND);
-          intent.putExtra(Intent.EXTRA_STREAM, uri);
-          intent.putExtra("jid", countryCode + contact + "@s.whatsapp.net");
-          intent.setType("application/octet-stream");
-          intent.setPackage(packageName);
-          intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-          context.startActivity(intent);
-          callbackContext.success(contact);
-        } catch (Exception e) {
-          callbackContext.error(e.getMessage());
-        }
-      }
-    });
+      callback.success(res);
+    } catch (JSONException e) {
+      callback.error(e.getMessage());
+    } catch (Exception e) {
+      callback.error(e.getMessage());
+    }
   }
 
-  private void sendEmail(final String email, final String subject, final String bodyText, final String bodyHTML,
-      final CallbackContext callbackContext) {
+  private void addShortcut(
+    String label,
+    String description,
+    String iconSrc,
+    String data,
+    String id
+  ) {
+    try {
+      Intent intent;
+      ImageDecoder.Source imgSrc;
+      Bitmap bitmap;
+      IconCompat icon;
 
-    final Activity activity = this.activity;
-    cordova.getThreadPool().execute(new Runnable() {
-      public void run() {
-        try {
-          Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", email, null));
-          intent.putExtra(Intent.EXTRA_SUBJECT, subject);
-          intent.putExtra(Intent.EXTRA_TEXT, bodyText);
-          if (!bodyHTML.equals(""))
-            intent.putExtra(Intent.EXTRA_HTML_TEXT, bodyHTML);
+      imgSrc =
+        ImageDecoder.createSource(
+          context.getContentResolver(),
+          Uri.parse(iconSrc)
+        );
+      bitmap = ImageDecoder.decodeBitmap(imgSrc);
+      icon = IconCompat.createWithBitmap(bitmap);
+      intent =
+        activity
+          .getPackageManager()
+          .getLaunchIntentForPackage(activity.getPackageName());
+      intent.putExtra("data", data);
 
-          activity.startActivity(Intent.createChooser(intent, "Send Email"));
-          callbackContext.success("OK");
-        } catch (Exception e) {
-          callbackContext.error(e.getMessage());
-        }
-      }
-    });
+      ShortcutInfoCompat shortcut = new ShortcutInfoCompat.Builder(context, id)
+        .setShortLabel(label)
+        .setLongLabel(description)
+        .setIcon(icon)
+        .setIntent(intent)
+        .build();
+
+      ShortcutManagerCompat.pushDynamicShortcut(context, shortcut);
+      callback.success();
+    } catch (Exception e) {
+      callback.error(e.toString());
+    }
   }
 
-  private void getAppInfo(final CallbackContext callbackContext) {
+  private void pinShortcut(String id) {
+    ShortcutManager shortcutManager = context.getSystemService(
+      ShortcutManager.class
+    );
 
-    final Context context = this.context;
-    cordova.getThreadPool().execute(new Runnable() {
-      public void run() {
-        JSONObject res = new JSONObject();
-        try {
-          PackageManager pm = context.getPackageManager();
-          PackageInfo pInfo = pm.getPackageInfo(context.getPackageName(), 0);
-          ApplicationInfo appInfo = context.getApplicationInfo();
+    if (shortcutManager.isRequestPinShortcutSupported()) {
+      ShortcutInfo pinShortcutInfo = new ShortcutInfo.Builder(context, id)
+        .build();
 
-          res.put("firstInstallTime", pInfo.firstInstallTime);
-          res.put("lastUpdateTime", pInfo.lastUpdateTime);
-          res.put("label", appInfo.loadLabel(pm).toString());
-          res.put("packageName", pInfo.packageName);
-          res.put("versionName", pInfo.versionName);
-          res.put("versionCode", pInfo.getLongVersionCode());
+      Intent pinnedShortcutCallbackIntent = shortcutManager.createShortcutResultIntent(
+        pinShortcutInfo
+      );
 
-          callbackContext.success(res);
+      PendingIntent successCallback = PendingIntent.getBroadcast(
+        context,
+        0,
+        pinnedShortcutCallbackIntent,
+        0
+      );
 
-        } catch (JSONException e) {
-          callbackContext.error(e.getMessage());
-        } catch (Exception e) {
-          callbackContext.error(e.getMessage());
-        }
-      }
-    });
+      shortcutManager.requestPinShortcut(
+        pinShortcutInfo,
+        successCallback.getIntentSender()
+      );
+
+      callback.success();
+    }
+
+    callback.error("Not suppported");
+  }
+
+  private void removeShortcut(String id) {
+    try {
+      List<String> list = new ArrayList<String>();
+      list.add(id);
+      ShortcutManagerCompat.removeDynamicShortcuts(context, list);
+      callback.success();
+    } catch (Exception e) {
+      callback.error(e.toString());
+    }
   }
 
   private Uri getContentProviderUri(String fileUri) {
@@ -266,7 +314,10 @@ public class System extends CordovaPlugin {
     return uri;
   }
 
-  private boolean isPackageInstalled(String packageName, PackageManager packageManager) {
+  private boolean isPackageInstalled(
+    String packageName,
+    PackageManager packageManager
+  ) {
     try {
       packageManager.getPackageInfo(packageName, 0);
       return true;
@@ -275,4 +326,19 @@ public class System extends CordovaPlugin {
     }
   }
 
+  private String getJSONValueString(JSONArray ar, int index) {
+    try {
+      return ar.getString(index);
+    } catch (JSONException e) {
+      return null;
+    }
+  }
+
+  private int getJSONValueInt(JSONArray ar, int index) {
+    try {
+      return ar.getInt(index);
+    } catch (JSONException e) {
+      return 0;
+    }
+  }
 }

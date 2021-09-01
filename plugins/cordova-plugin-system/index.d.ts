@@ -13,17 +13,63 @@ interface AppInfo{
   lastUpdateTime: Number;
 }
 
+interface ShortCut{
+  id: String;
+  label: String;
+  description: String;
+  icon: String;
+  data: String;
+}
+
 interface System {
-  getWebviewInfo(): Info;
+  /**
+   * Get informartion about current webview
+   */
+  getWebviewInfo(onSuccess: (res: Info) => void, onFail: (err: String) => void): void;
+  /**
+   * Clear app cache
+   */
   clearCache(): void;
-  hideNavigation(): void;
+  /**
+   * Checks if power saving mode is on
+   * @param onSuccess 
+   * @param onFail 
+   */
   isPowerSaveMode(onSuccess: (res: Boolean) => void, onFail: (err: String) => void): void;
+  /**
+   * Shares file using Apps content provider
+   * @param fileUri File to share
+   * @param onSuccess 
+   * @param onFail 
+   */
   shareFile(fileUri: String, onSuccess: () => void, onFail: (err: String) => void): void;
-  shareViaWhatsapp(fileUri: String, contact: String, countryCode: String, onSuccess: () => void, onFail: (err: String) => void): void;
-  sendEmail(email: String, subject: String, bodyText: String, bodyHTML: String, onSuccess: () => void, onFail: (err: String) => void): void;
-  convertUriToContentSchema(fileUri: String, onSuccess: (uri: String) => void, onFail: (err: String) => void): void;
+  /**
+   * Gets app infomartion
+   * @param onSuccess 
+   * @param onFail 
+   */
   getAppInfo(onSuccess: (info: AppInfo) => void, onFail: (err: String) => void): void;
-  closeApp(onSuccess: (res: Boolean) => void, onFail: (err: String) => void): void;
+  /**
+   * Add shortcut to app context menu
+   * @param shortCut 
+   * @param onSuccess 
+   * @param onFail 
+   */
+  addShortcut(shortCut: ShortCut, onSuccess: (res: Boolean) => void, onFail: (err: String) => void): void;
+  /**
+   * Removes shortcut
+   * @param id 
+   * @param onSuccess 
+   * @param onFail 
+   */
+  removeShortcut(id: String, onSuccess: (res: Boolean) => void, onFail: (err: String) => void): void;
+  /**
+   * Pins a shortcut
+   * @param id 
+   * @param onSuccess 
+   * @param onFail 
+   */
+  pinShortcut(id: String, onSuccess: (res: Boolean) => void, onFail: (err: String) => void): void;
 }
 
 declare var system: System;

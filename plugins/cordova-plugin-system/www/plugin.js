@@ -1,49 +1,51 @@
 module.exports = {
   getWebviewInfo: function (onSuccess, onFail) {
-    cordova.exec(onSuccess, onFail, "System", "get-webkit-info", []);
+    cordova.exec(onSuccess, onFail, 'System', 'get-webkit-info', []);
   },
   clearCache: function (onSuccess, onFail) {
-    cordova.exec(onSuccess, onFail, "System", "clear-cache", []);
-  },
-  hideNavigation: function (onSuccess, onFail) {
-    cordova.exec(onSuccess, onFail, "System", "hide-navigation", []);
+    cordova.exec(onSuccess, onFail, 'System', 'clear-cache', []);
   },
   isPowerSaveMode: function (onSuccess, onFail) {
-    cordova.exec(onSuccess, onFail, "System", "is-powersave-mode", []);
+    cordova.exec(onSuccess, onFail, 'System', 'is-powersave-mode', []);
   },
   shareFile: function (fileUri, filename, onSuccess, onFail) {
-    if (typeof filename === "function") {
+    if (typeof filename === 'function') {
       onSuccess = filename;
       onFail = onSuccess;
-      filename = "";
+      filename = '';
     }
 
-    if (!filename) filename = "";
+    if (!filename) filename = '';
 
-    cordova.exec(onSuccess, onFail, "System", "share-file", [fileUri, filename]);
+    cordova.exec(onSuccess, onFail, 'System', 'share-file', [
+      fileUri,
+      filename,
+    ]);
   },
-  shareViaWhatsapp: function (fileUri, contact, countryCode, onSuccess, onFail) {
-    if (!fileUri || !contact || !countryCode) throw new Error("Missing required parameters!");
-    cordova.exec(onSuccess, onFail, "System", "share-via-whatsapp", [fileUri, contact, countryCode]);
+  getAppInfo: function (onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'System', 'get-app-info', []);
   },
-  sendEmail: function (email, subject, bodyText, bodyHTML, onSuccess, onFail) {
-    if (typeof bodyHTML === "function") {
-      onSuccess = bodyHTML;
-      onFail = onSuccess;
-      bodyHTML = "";
-    }
+  addShortcut: function (shortcut, onSuccess, onFail) {
+    var id, label, description, icon, data;
 
-    if (!bodyHTML) bodyHTML = "";
+    id = shortcut.id;
+    label = shortcut.label;
+    description = shortcut.description;
+    icon = shortcut.icon;
+    data = shortcut.data;
 
-    cordova.exec(onSuccess, onFail, "System", "send-email", [email, subject, bodyText, bodyHTML]);
+    cordova.exec(onSuccess, onFail, 'System', 'add-shortcut', [
+      label,
+      description,
+      icon,
+      data,
+      id,
+    ]);
   },
-  convertUriToContentSchema: function (fileUri, onSuccess, onFail){
-    cordova.exec(onSuccess, onFail, "System", "convert-uri-to-content-schema", [fileUri]);
+  removeShortcut: function (id, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'System', 'remove-shortcut', [id]);
   },
-  getAppInfo: function(onSuccess, onFail){
-    cordova.exec(onSuccess, onFail, "System", "get-app-info", []);
+  pinShortcut: function (id, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'System', 'pin-shortcut', [id]);
   },
-  closeApp: function(onSuccess, onFail){
-    cordova.exec(onSuccess, onFail, "System", "close-app", []);
-  }
 };
