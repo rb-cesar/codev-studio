@@ -59,7 +59,7 @@ module.exports = {
       onFail,
       'System',
       'is-external-storage-manager',
-      []
+      [],
     );
   },
   requestPermission: function (permission, onSuccess, onFail) {
@@ -75,4 +75,27 @@ module.exports = {
   hasPermission: function (permission, onSuccess, onFail) {
     cordova.exec(onSuccess, onFail, 'System', 'has-permission', [permission]);
   },
+  openInBrowser: function (src) {
+    cordova.exec(
+      function () {},
+      function () {},
+      'System',
+      'open-in-browser',
+      [src],
+    );
+  },
+  launchApp: function (app, action, value, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'System', 'launch-app', [
+      app,
+      action,
+      value,
+    ]);
+  },
+  inAppBrowser: function (url, title, showButtons) {
+    cordova.exec(()=>{}, ()=>{}, 'System', 'in-app-browser', [url, title, !!showButtons]);
+  },
+  setUiTheme: function(theme, type, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'System', 'set-ui-theme', [theme, type]);
+  },
 };
+
