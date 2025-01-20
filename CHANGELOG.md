@@ -1,5 +1,23 @@
 # Change Log
 
+## v1.10.8 (956)
+* fix: corrected typo in "vission" to "vision" by @ByteJoseph in #1125
+* feat: Improve tab view gesture handling to distinguish between scroll and swipe on plugin page by @bajrangCoder in #1131
+* fix: heading and image alignment issues with alignment="center" on plugin page by @bajrangCoder in #1132
+* fix: file listing in sftp by @bajrangCoder in #1133
+* feat: color preview in svg files by @bajrangCoder in #1135
+* Implement custom editor tabs support  by @bajrangCoder in #1136
+  * show image, video, audio previews in editor instead of popups
+  * exposed api for plugin developers to add content in editor tab , `EditorFile`
+* feat: redesigned about page by @bajrangCoder in #1153
+* feat: plugin rebuild option for local plugins by @bajrangCoder in #1150
+  * plugin can use `cordova.plugin.http` instead of fetch to avoid cors issue while making network requests
+* fix: fallback to */* when accept attribute is absent in input type="file" in inapp browser by @bajrangCoder in #1154
+* fix(browser): re-show console on page reload in inapp browser by @bajrangCoder in #1155
+* Redesigned Plugin page by @bajrangCoder in #1152
+  * new meta data for plugin.json: `license`, `changelog`, `keywords`,`contributors`
+* chore(ace): updated to v1.37.5 by @bajrangCoder in #1158
+
 ## v1.10.7 (955)
 
 * Update hu-hu.json by @summoner001 in https://github.com/Acode-Foundation/Acode/pull/1092
