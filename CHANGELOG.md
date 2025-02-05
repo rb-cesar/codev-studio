@@ -24,6 +24,22 @@
 * feat: improved file info dialog box design #1170
 * fix: infinite scroll on plugin page to remove duplicates #1171
 * feat: show eruda console for external site in Acode built-in browser #1172
+* Rewritten Sftp implementation
+  * better performance and stability
+  * better symlinks support and also better visual for distinguishing symlinks
+  * proper error handling
+  * better reading(downloading) and writing
+  * uses native api for fs stuffs
+  * better buffer handling etc , now even a 30-40 minutes video will be playable within few seconds (even faster than internal fs)
+  * emojis are supported
+* in #1167
+  * fix: logger for limiting it's size
+  * fix: show info dialog issue in case of non editor tab
+  * feat: detect binary files without reading it
+  * tweaked breadcrumbs of file browser to follow app theme
+  * updated ssh lib to `v3.1.2`
+  * removed deprecated apis
+  * experimental saving of native logs in acode logger
 
 ## v1.10.7 (955)
 
