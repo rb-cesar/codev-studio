@@ -24,6 +24,27 @@ module.exports = {
   putFile: function (filename, localFilename, onSuccess, onFail) {
     cordova.exec(onSuccess, onFail, 'Sftp', 'putFile', [filename, localFilename]);
   },
+  lsDir: function (path, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'lsDir', [path]);
+  },
+  stat: function (path, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'stat', [path]);
+  },
+  mkdir: function (path, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'mkdir', [path]);
+  },
+  rm: function (path, force, recurse, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'rm', [path, force, recurse]);
+  },
+  createFile: function (path, content, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'createFile', [path, content]);
+  },
+  rename: function (oldpath, newpath, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'rename', [oldpath, newpath]);
+  },
+  pwd: function (onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'pwd', []);
+  },
   close: function (onSuccess, onFail) {
     cordova.exec(onSuccess, onFail, 'Sftp', 'close', []);
   },

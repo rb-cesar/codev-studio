@@ -748,6 +748,9 @@ export default class EditorFile {
 					editorManager.container.parentElement.appendChild(this.content);
 				}
 			}
+			if (activeFile && activeFile.type === "editor") {
+				activeFile.session.selection.clearSelection();
+			}
 		}
 
 		this.#tab.classList.add("active");

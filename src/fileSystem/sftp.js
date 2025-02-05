@@ -60,7 +60,7 @@ class SftpClient {
 	 * @param {String} filename
 	 * @param {boolean} stat
 	 */
-	lsDir(filename = this.#path, stat = false) {
+	lsDir(filename = this.#path) {
 		return new Promise((resolve, reject) => {
 			sftp.isConnected(async (connectionID) => {
 				(async () => {
@@ -74,26 +74,18 @@ class SftpClient {
 					}
 
 					const path = this.#safeName(filename);
-					let options = "-gaAG";
-					if (stat) options += "d";
 
-					sftp.exec(
-						`/usr/bin/ls ${options} --full-time -L "${path}" | awk '{$2=\"\"; print $0}'`,
-						async (res) => {
-							if (res.code <= 0) {
-								if (stat) {
-									const file = await this.#parseFile(
-										res.result,
-										Url.dirname(filename),
-									);
-									resolve(file);
-									return;
+					sftp.lsDir(
+						path,
+						(res) => {
+							res.forEach((file) => {
+								file.url = Url.join(this.#base, file.url);
+								file.type = mimeType.lookup(filename);
+								if (file.isLink) {
+									file.linkTarget = Url.join(this.#base, file.linkTarget);
 								}
-								const dirList = await this.#parseDir(filename, res.result);
-								resolve(dirList);
-								return;
-							}
-							reject(this.#errorCodes(res.code));
+							});
+							resolve(res);
 						},
 						(err) => {
 							reject(err);
@@ -122,26 +114,11 @@ class SftpClient {
 							return;
 						}
 					}
-
-					const file = this.#safeName(filename);
-					const cmd = `[[ -f "${file}" ]] && echo "Already exists" || touch "${filename}"`;
-					sftp.exec(
-						cmd,
-						async (res) => {
-							if (res.code <= 0) {
-								if (content) {
-									try {
-										await this.writeFile(content, filename);
-									} catch (error) {
-										return reject(error);
-									}
-								}
-
-								const stat = await this.lsDir(filename, true);
-								resolve(stat.url);
-								return;
-							}
-							reject(this.#errorCodes(res.code));
+					sftp.createFile(
+						filename,
+						content ? content : "",
+						async (_res) => {
+							resolve(Url.join(this.#base, filename));
 						},
 						(err) => {
 							reject(err);
@@ -170,16 +147,10 @@ class SftpClient {
 						}
 					}
 
-					sftp.exec(
-						`mkdir "${this.#safeName(dirname)}"`,
-						async (res) => {
-							if (res.code <= 0) {
-								const stat = await this.lsDir(dirname, true);
-								resolve(stat.url);
-								return;
-							}
-
-							reject(this.#errorCodes(res.code));
+					sftp.mkdir(
+						this.#safeName(dirname),
+						async (_res) => {
+							resolve(Url.join(this.#base, this.#safeName(dirname)));
 						},
 						(err) => {
 							reject(err);
@@ -255,39 +226,75 @@ class SftpClient {
 		});
 	}
 
-	copyTo(dest) {
+	async copyTo(dest) {
 		const src = this.#path;
 		return new Promise((resolve, reject) => {
 			sftp.isConnected((connectionID) => {
 				(async () => {
-					if (this.#notConnected(connectionID)) {
-						try {
+					try {
+						if (this.#notConnected(connectionID)) {
 							await this.connect();
-						} catch (error) {
-							reject(error);
-							return;
 						}
+
+						const srcStat = await this.stat();
+
+						if (srcStat.isDirectory) {
+							await this.#copyDirectory(src, dest);
+						} else {
+							await this.#copyFile(src, dest);
+						}
+
+						const finalPath = Path.join(dest, Path.basename(src));
+						resolve(Url.join(this.#base, finalPath));
+					} catch (error) {
+						reject(error);
 					}
-
-					const cmd = `cp -r "${this.#safeName(src)}" "${this.#safeName(dest)}"`;
-					sftp.exec(
-						cmd,
-						async (res) => {
-							if (res.code <= 0) {
-								const stat = await this.lsDir(dest, true);
-								resolve(stat.url);
-								return;
-							}
-
-							reject(this.#errorCodes(res.code));
-						},
-						(err) => {
-							reject(err);
-						},
-					);
 				})();
 			}, reject);
 		});
+	}
+
+	async #copyFile(src, dest) {
+		const destPath = Path.join(dest, Path.basename(src));
+		const tempFile = this.#getLocalname(src);
+
+		// Download source file
+		await new Promise((resolve, reject) => {
+			sftp.getFile(this.#safeName(src), tempFile, resolve, reject);
+		});
+
+		// Upload
+		await new Promise((resolve, reject) => {
+			sftp.putFile(this.#safeName(destPath), tempFile, resolve, reject);
+		});
+
+		// Clean up temp file
+		try {
+			await internalFs.delete(tempFile);
+		} catch (error) {
+			console.warn("Failed to cleanup temp file:", error);
+		}
+	}
+
+	async #copyDirectory(src, dest) {
+		// Create destination directory
+		const destDir = Path.join(dest, Path.basename(src));
+		await new Promise((resolve, reject) => {
+			sftp.mkdir(this.#safeName(destDir), resolve, reject);
+		});
+
+		// Get contents of source directory
+		const contents = await this.lsDir(src);
+
+		// Copy all items
+		for (const item of contents) {
+			const itemSrc = Path.join(src, item.name);
+			if (item.isDirectory) {
+				await this.#copyDirectory(itemSrc, destDir);
+			} else {
+				await this.#copyFile(itemSrc, destDir);
+			}
+		}
 	}
 
 	moveTo(dest) {
@@ -314,20 +321,12 @@ class SftpClient {
 					}
 
 					newname = move ? newname : Path.join(Path.dirname(src), newname);
-					const cmd = `mv "${this.#safeName(src)}" "${this.#safeName(newname)}"`;
-					sftp.exec(
-						cmd,
-						async (res) => {
-							if (res.code <= 0) {
-								const url = move
-									? Url.join(newname, Url.basename(src))
-									: newname;
-								const stat = await this.lsDir(url, true);
-								resolve(stat.url);
-								return;
-							}
-
-							reject(this.#errorCodes(res.code));
+					sftp.rename(
+						this.#safeName(src),
+						this.#safeName(newname),
+						async (_res) => {
+							const url = move ? Url.join(newname, Url.basename(src)) : newname;
+							resolve(Url.join(this.#base, url));
 						},
 						(err) => {
 							reject(err);
@@ -356,16 +355,12 @@ class SftpClient {
 						}
 					}
 					await this.#setStat();
-					const cmd = `rm ${this.#stat.isDirectory ? "-r" : ""} "${this.#safeName(filename)}"`;
-					sftp.exec(
-						cmd,
-						(res) => {
-							if (res.code <= 0) {
-								resolve(fullFilename);
-								return;
-							}
-
-							reject(this.#errorCodes(res.code));
+					sftp.rm(
+						this.#safeName(filename),
+						this.#stat.isDirectory ? true : false,
+						this.#stat.isDirectory ? true : false,
+						(_res) => {
+							resolve(fullFilename);
 						},
 						(err) => {
 							reject(err);
@@ -389,15 +384,9 @@ class SftpClient {
 						}
 					}
 
-					sftp.exec(
-						"pwd",
+					sftp.pwd(
 						(res) => {
-							if (res.code <= 0) {
-								resolve(res.result);
-								return;
-							}
-
-							reject(this.#errorCodes(res.code));
+							resolve(res);
 						},
 						(err) => {
 							reject(err);
@@ -454,175 +443,51 @@ class SftpClient {
 	async stat() {
 		if (this.#stat) return this.#stat;
 
-		const filename = this.#safeName(this.#path);
-		const file = await this.lsDir(filename, true);
-		if (!file) return null;
+		return new Promise((resolve, reject) => {
+			sftp.isConnected(async (connectionID) => {
+				(async () => {
+					if (this.#notConnected(connectionID)) {
+						try {
+							await this.connect();
+						} catch (error) {
+							reject(error);
+							return;
+						}
+					}
 
-		const stat = {
-			name: file.name,
-			exists: true,
-			length: file.size,
-			isFile: file.isFile,
-			isDirectory: file.isDirectory,
-			isVirtual: file.isLink,
-			canWrite: file.canWrite,
-			canRead: file.canRead,
-			lastModified: file.modifiedDate,
-			type: mimeType.lookup(filename),
-			url: file.url,
-		};
+					const path = this.#safeName(this.#path);
 
-		helpers.defineDeprecatedProperty(
-			stat,
-			"uri",
-			function () {
-				return this.url;
-			},
-			function (val) {
-				this.url = val;
-			},
-		);
-
-		return stat;
+					sftp.stat(
+						path,
+						(res) => {
+							res.url = Url.join(this.#base, res.url);
+							res.type = mimeType.lookup(path);
+							if (res.isLink) {
+								res.linkTarget = Url.join(this.#base, res.linkTarget);
+							}
+							helpers.defineDeprecatedProperty(
+								res,
+								"uri",
+								function () {
+									return this.url;
+								},
+								function (val) {
+									this.url = val;
+								},
+							);
+							resolve(res);
+						},
+						(err) => {
+							reject(err);
+						},
+					);
+				})();
+			}, reject);
+		});
 	}
 
 	get localName() {
 		return this.#getLocalname(this.#path);
-	}
-
-	/**
-	 *
-	 * @param {String} dirname
-	 * @param {String} res
-	 */
-	async #parseDir(dirname, res) {
-		if (!res) return [];
-
-		const list = res.split("\n");
-
-		if (/total/.test(list[0])) list.splice(0, 1);
-
-		const filePromises = list.map((i) => this.#parseFile(i, dirname));
-		const fileList = await Promise.all(filePromises);
-		return fileList.filter((i) => !!i);
-	}
-
-	async #parseFile(item, dirname) {
-		if (!item) return null;
-		const PERMISSIONS = 0;
-		const SIZE = 2;
-		const MODIFIED_DATE = 3;
-		const MODIFIED_TIME = 4;
-		const MODIFIED_TIME_ZONE = 5;
-		const NAME = 6;
-		const DIR_TYPE = (ch) => {
-			switch (ch) {
-				case "d":
-					return "directory";
-				case "l":
-					return "link";
-				default:
-					return "file";
-			}
-		};
-
-		const itemData = item.split(" ");
-		const GET = (len, join = true) => {
-			const str = itemData.splice(len);
-			return join ? str.join(" ") : str;
-		};
-
-		let name = GET(NAME, false);
-		const modTimeZone = GET(MODIFIED_TIME_ZONE);
-		const modTime = GET(MODIFIED_TIME);
-		const modDate = GET(MODIFIED_DATE);
-		const size = Number.parseInt(GET(SIZE)) || 0;
-		const permissions = GET(PERMISSIONS);
-		const date = new Date(`${modDate} ${modTime} ${modTimeZone}`);
-		const canrw = permissions.substr(1, 2);
-		const type = DIR_TYPE(permissions[0]);
-
-		let isDirectory = type === "directory";
-		let isFile = type === "file";
-		let targetType = type;
-
-		if (type === "link") {
-			name.splice(name.indexOf("->"));
-			if (name.length === 0) return null;
-			const symlinkPath = Url.join(
-				dirname,
-				Url.basename(name[name.length - 1]),
-			);
-			let linkTarget = await new Promise((resolve, reject) => {
-				sftp.exec(
-					`readlink "${this.#safeName(symlinkPath)}"`,
-					(res) => {
-						if (res.code <= 0) {
-							resolve(res.result.trim());
-						} else {
-							reject(this.#errorCodes(res.code));
-						}
-					},
-					(err) => {
-						reject(err);
-					},
-				);
-			});
-			linkTarget = linkTarget.startsWith("/")
-				? linkTarget
-				: Url.join(dirname, linkTarget);
-
-			targetType = await new Promise((resolve, reject) => {
-				sftp.exec(
-					`/usr/bin/ls -ld "${this.#safeName(linkTarget)}"`,
-					(res) => {
-						if (res.code <= 0) {
-							const output = res.result.trim();
-							switch (output[0]) {
-								case "d":
-									resolve("directory");
-									break;
-								default:
-									resolve("file");
-							}
-						} else {
-							resolve(["file", this.#errorCodes(res.code)]);
-						}
-					},
-					(err) => {
-						// If the exec fails, maybe the target is deleted, continue anyway
-						resolve(["file", this.#errorCodes(res.code)]);
-					},
-				);
-			});
-			if (Array.isArray(targetType)) {
-				const [type, err] = targetType;
-				targetType = type;
-			}
-			isDirectory = targetType === "directory";
-			isFile = targetType === "file";
-		}
-
-		name = Url.basename(name.join(" "));
-		if (["..", ".", "`"].includes(name)) return null;
-
-		let url = dirname
-			? Url.join(this.#base, dirname, name)
-			: Url.join(this.#base, name);
-
-		return {
-			url,
-			name,
-			size,
-			type: targetType,
-			uri: url,
-			canRead: /r/.test(canrw),
-			canWrite: /w/.test(canrw),
-			isDirectory,
-			isLink: type === "link",
-			isFile,
-			modifiedDate: date,
-		};
 	}
 
 	/**
@@ -635,53 +500,53 @@ class SftpClient {
 		return ar.map((dirname) => escapeCh(dirname)).join("/");
 	}
 
-	#errorCodes(code, defaultMessage = strings["an error occurred"]) {
-		switch (code) {
-			case 0:
-				return strings["success"];
-			case 1:
-				return strings["operation not permitted"];
-			case 2:
-				return strings["no such file or directory"];
-			case 5:
-				return strings["input/output error"];
-			case 13:
-				return strings["permission denied"];
-			case 14:
-				return strings["bad address"];
-			case 17:
-				return strings["file exists"];
-			case 20:
-				return strings["not a directory"];
-			case 21:
-				return strings["is a directory"];
-			case 22:
-				return strings["invalid argument"];
-			case 23:
-				return strings["too many open files in system"];
-			case 24:
-				return strings["too many open files"];
-			case 26:
-				return strings["text file busy"];
-			case 27:
-				return strings["file too large"];
-			case 28:
-				return strings["no space left on device"];
-			case 30:
-				return strings["read-only file system"];
-			case 37:
-				return strings["too many users"];
-			case 110:
-				return strings["connection timed out"];
-			case 111:
-				return strings["connection refused"];
-			case 130:
-				return strings["owner died"];
+	// #errorCodes(code, defaultMessage = strings["an error occurred"]) {
+	// 	switch (code) {
+	// 		case 0:
+	// 			return strings["success"];
+	// 		case 1:
+	// 			return strings["operation not permitted"];
+	// 		case 2:
+	// 			return strings["no such file or directory"];
+	// 		case 5:
+	// 			return strings["input/output error"];
+	// 		case 13:
+	// 			return strings["permission denied"];
+	// 		case 14:
+	// 			return strings["bad address"];
+	// 		case 17:
+	// 			return strings["file exists"];
+	// 		case 20:
+	// 			return strings["not a directory"];
+	// 		case 21:
+	// 			return strings["is a directory"];
+	// 		case 22:
+	// 			return strings["invalid argument"];
+	// 		case 23:
+	// 			return strings["too many open files in system"];
+	// 		case 24:
+	// 			return strings["too many open files"];
+	// 		case 26:
+	// 			return strings["text file busy"];
+	// 		case 27:
+	// 			return strings["file too large"];
+	// 		case 28:
+	// 			return strings["no space left on device"];
+	// 		case 30:
+	// 			return strings["read-only file system"];
+	// 		case 37:
+	// 			return strings["too many users"];
+	// 		case 110:
+	// 			return strings["connection timed out"];
+	// 		case 111:
+	// 			return strings["connection refused"];
+	// 		case 130:
+	// 			return strings["owner died"];
 
-			default:
-				return defaultMessage;
-		}
-	}
+	// 		default:
+	// 			return defaultMessage;
+	// 	}
+	// }
 
 	/**
 	 *
