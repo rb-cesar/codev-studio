@@ -34,6 +34,10 @@ import android.widget.TextView;
 import com.foxdebug.browser.Emulator;
 import com.foxdebug.browser.Menu;
 import com.foxdebug.system.Ui;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class Browser extends LinearLayout {
 
@@ -42,7 +46,7 @@ public class Browser extends LinearLayout {
   public Menu menu;
   public WebView webView;
   private Ui.Theme theme;
-  private Context context;
+  public Context context;
   private TextView urlText;
   private LinearLayout main;
   private ImageView favicon;
@@ -628,23 +632,56 @@ class BrowserWebViewClient extends WebViewClient {
     // Inject console for external sites
     // this is not a good solution but for now its good, later we'll improve this
     if (!url.startsWith("http://localhost")) {
-      String script =
-        "" +
-        "if(!window.eruda){" +
-        "  var script = document.createElement('script');" +
-        "  script.src = 'https://cdn.jsdelivr.net/npm/eruda';" +
-        "  script.onload = function() {" +
-        "    eruda.init({" +
-        "      theme: 'dark'" +
-        "    });" +
-        "    eruda._shadowRoot.querySelector('.eruda-entry-btn').style.display = 'none';" +
-        "    sessionStorage.setItem('__console_available', true);" +
-        "    document.addEventListener('showconsole', function() { eruda.show(); });" +
-        "    document.addEventListener('hideconsole', function() { eruda.hide(); });" +
-        "  };" +
-        "  document.head.appendChild(script);" +
-        "}";
-      browser.webView.evaluateJavascript(script, null);
+      try {
+        File eruaFile = new File(browser.context.getFilesDir(), "eruda.js");
+        StringBuilder scriptContent = new StringBuilder();
+        BufferedReader reader = new BufferedReader(new FileReader(eruaFile));
+        String line;
+        while ((line = reader.readLine()) != null) {
+          scriptContent.append(line);
+          scriptContent.append("\n");
+        }
+        reader.close();
+
+        // Inject the script content directly
+        String script =
+          "if(!window.eruda){" +
+          "  var script = document.createElement('script');" +
+          "  script.textContent = `" +
+          scriptContent.toString() +
+          "`;" +
+          "  document.head.appendChild(script);" +
+          "  eruda.init({" +
+          "    theme: 'dark'" +
+          "  });" +
+          "  eruda._shadowRoot.querySelector('.eruda-entry-btn').style.display = 'none';" +
+          "  sessionStorage.setItem('__console_available', true);" +
+          "  document.addEventListener('showconsole', function() { eruda.show(); });" +
+          "  document.addEventListener('hideconsole', function() { eruda.hide(); });" +
+          "}";
+
+        browser.webView.evaluateJavascript(script, null);
+      } catch (IOException e) {
+        e.printStackTrace();
+        // Fallback to CDN if local file fails
+        String fallbackScript =
+          "if(!window.eruda){" +
+          "  var script = document.createElement('script');" +
+          "  script.src = 'https://cdn.jsdelivr.net/npm/eruda';" +
+          "  script.crossOrigin = 'anonymous';" +
+          "  script.onload = function() {" +
+          "    eruda.init({" +
+          "      theme: 'dark'" +
+          "    });" +
+          "    eruda._shadowRoot.querySelector('.eruda-entry-btn').style.display = 'none';" +
+          "    sessionStorage.setItem('__console_available', true);" +
+          "    document.addEventListener('showconsole', function() { eruda.show(); });" +
+          "    document.addEventListener('hideconsole', function() { eruda.hide(); });" +
+          "  };" +
+          "  document.head.appendChild(script);" +
+          "}";
+        browser.webView.evaluateJavascript(fallbackScript, null);
+      }
       browser.menu.setChecked("Console", false);
     } else {
       browser.webView.evaluateJavascript(
