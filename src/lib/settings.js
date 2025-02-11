@@ -55,7 +55,7 @@ class Settings {
 		"**/.git/**",
 		"**/.svn/**",
 		"**/.hg/**",
-		"**/.vscode/**", 
+		"**/.vscode/**",
 		"**/.idea/**",
 		"**/.vs/**",
 		"**/.project/**",
@@ -76,7 +76,7 @@ class Settings {
 		"**/logs/**",
 		"**/.sass-cache/**",
 		"**/.DS_Store/**",
-		"**/Thumbs.db/**"
+		"**/Thumbs.db/**",
 	];
 	#IS_TABLET = innerWidth > 768;
 
