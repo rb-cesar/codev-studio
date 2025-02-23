@@ -41,6 +41,17 @@
   * removed deprecated apis
   * experimental saving of native logs in acode logger
 * tweaked donation page
+* improved ftp client (#1193 by @bajrangCoder)
+ - supports emoji named files
+ - supports symlink
+ - better handling of video, image as binary
+ - show names instead of path
+* many translation updates for `hu-hu` by @summoner
+* fix: wrong file attribute in ftp #1194
+* feat: new editor setting: `Fade fold widgets` #1195 @bajrangCoder
+* reworked plugin page ui and now it will show all basic info in list such as author name, license, price, etc #1196 by @bajrangCoder
+* fix: Palette not opening when called from existing palette #1197 @bajrangCoder
+* feat: Add command to change editor and app theme via command palette #1197 @bajrangCoder
 
 ## v1.10.7 (955)
 
