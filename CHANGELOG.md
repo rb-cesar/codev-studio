@@ -56,7 +56,10 @@
 * Tweaked the donation page  #1188
 
 ### Other Changes  
-* Updated **Ace Editor** to v1.37.5 by @bajrangCoder in #1158  
+* **Chore**: Updated Ace Editor to `v1.39.0`
+  * Added CSV & TSV mode
+  * Improved search support for multi-line patterns (`\n`, `\t`)
+  * And more—see the Ace Changelog
 * Many translation updates for `hu-hu` by @summoner  
 
 ## v1.10.7 (955)
