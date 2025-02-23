@@ -1,6 +1,6 @@
 # Change Log
 
-## v1.10.8 (956)
+## v1.11.0 (956)
 
 ### Fixes  
 * Fixed a typo: "vission" → "vision" by @ByteJoseph in #1125  
