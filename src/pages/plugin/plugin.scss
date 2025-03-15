@@ -191,15 +191,19 @@
           word-wrap: normal;
           white-space: pre;
           font-size: 0.8rem;
-          padding: 5px;
+          border-radius: 4px;
+          padding: 1em;
           margin: 5px 0;
           background: var(--primary-color);
           color: var(--primary-text-color);
-          border-left: solid 5px var(--active-color);
+          /* border-left: solid 5px var(--active-color); */
           overflow: auto;
           width: calc(100% - 10px);
           display: block;
           user-select: text;
+          div {
+            background: var(--primary-color);
+          }
         }
       }
     }
