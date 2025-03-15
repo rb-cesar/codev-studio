@@ -308,7 +308,10 @@ export default async function PluginInclude(
 		const pluginSettings = settings.uiSettings[`plugin-${plugin.id}`];
 		$page.body = view({
 			...plugin,
-			body: markdownIt({ html: true, xhtmlOut: true })
+			body: markdownIt({
+				html: true,
+				xhtmlOut: true,
+			})
 				.use(MarkdownItGitHubAlerts)
 				.use(anchor, {
 					slugify: (s) =>
@@ -393,6 +396,28 @@ export default async function PluginInclude(
 			const copyButton = document.createElement("button");
 			copyButton.className = "copy-button";
 			copyButton.textContent = "Copy";
+
+			const codeElement = pre.querySelector("code");
+			if (codeElement) {
+				const langMatch = codeElement.className.match(
+					/language-(\w+)|(javascript)/,
+				);
+				if (langMatch) {
+					const langMap = {
+						bash: "sh",
+						shell: "sh",
+					};
+					const lang = langMatch[1] || langMatch[2];
+					const mappedLang = langMap[lang] || lang;
+					const highlight = ace.require("ace/ext/static_highlight");
+					highlight(codeElement, {
+						mode: `ace/mode/${mappedLang}`,
+						theme: settings.value.editorTheme.startsWith("ace/theme/")
+							? settings.value.editorTheme
+							: "ace/theme/" + settings.value.editorTheme,
+					});
+				}
+			}
 
 			copyButton.addEventListener("click", async () => {
 				const code = pre.querySelector("code")?.textContent || pre.textContent;
