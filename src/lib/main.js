@@ -233,12 +233,22 @@ async function onDeviceReady() {
 		window.log("error", error);
 		toast(`Error: ${error.message}`);
 	} finally {
-		setTimeout(() => {
+		setTimeout(async () => {
 			document.body.removeAttribute("data-small-msg");
 			app.classList.remove("loading", "splash");
+
+			// load plugins
+			try {
+				await loadPlugins();
+			} catch (error) {
+				window.log("error", "Failed to load plugins!");
+				window.log("error", error);
+				toast("Failed to load plugins!");
+			}
 			applySettings.afterRender();
 		}, 500);
 	}
+
 	// Check for app updates
 	if (navigator.onLine) {
 		cordova.plugin.http.sendRequest(
@@ -430,13 +440,13 @@ async function loadApp() {
 
 	new EditorFile();
 
-	//load plugins
+	// load theme plugins
 	try {
-		await loadPlugins();
+		await loadPlugins(true);
 	} catch (error) {
-		window.log("error", "Plugins loading failed!");
+		window.log("error", "Failed to load theme plugins!");
 		window.log("error", error);
-		toast("Plugins loading failed!");
+		toast("Failed to load theme plugins!");
 	}
 
 	acode.setLoadingMessage("Loading folders...");
