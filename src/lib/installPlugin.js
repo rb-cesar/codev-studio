@@ -67,7 +67,11 @@ export default async function installPlugin(
 		if (!isDependency) loaderDialog.show();
 
 		let plugin;
-		if (pluginUrl.includes(constants.API_BASE)) {
+		if (
+			pluginUrl.includes(constants.API_BASE) ||
+			pluginUrl.startsWith("file:") ||
+			pluginUrl.startsWith("content:")
+		) {
 			// Use fsOperation for Acode registry URL
 			plugin = await fsOperation(pluginUrl).readFile(
 				undefined,
