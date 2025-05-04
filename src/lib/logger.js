@@ -102,7 +102,7 @@ class Logger {
 		} catch (error) {
 			console.error(
 				"Error in handling fs operation on log file. Error:",
-				error
+				error,
 			);
 		}
 	};
