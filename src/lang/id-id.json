@@ -405,5 +405,9 @@
 	"quicktools:dollar": "Masukkan simbol dolar",
 	"quicktools:modulo": "Masukkan simbol modulus/persen",
 	"quicktools:caret": "Masukkan tanda sisipan",
+	"plugin_enabled": "Plugin diaktifkan",
+	"plugin_disabled": "Plugin dinonaktifkan",
+	"enable_plugin": "Aktifkan Plugin ini",
+	"disable_plugin": "Nonaktifkan Plugin ini",
 	"open_source": "Open Source"
 }
