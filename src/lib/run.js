@@ -22,6 +22,9 @@ import appSettings from "./settings";
 /**@type {Server} */
 let webServer;
 
+// An open console may outlive the server instance that created it.
+const CONSOLE_THEME_STATE = "__acode_console_theme.json";
+
 /**
  * Starts the server and run the active file in browser
  * @param {Boolean} isConsole
@@ -73,6 +76,7 @@ async function run(
 	const MIMETYPE_HTML = mimeType.lookup("html");
 	const CONSOLE_SCRIPT = uuid + "_console.js";
 	const CONSOLE_WORKER_SCRIPT = uuid + "_console_worker.js";
+	const CONSOLE_THEME_STYLE = uuid + "_console_theme.css";
 	const MARKDOWN_STYLE = uuid + "_md.css";
 	const queue = [];
 
@@ -211,6 +215,18 @@ async function run(
 				sendFileContent(url, reqId, "application/javascript");
 				break;
 
+			case CONSOLE_THEME_STYLE:
+				sendText(getConsoleThemeSnapshot().css, reqId, "text/css");
+				break;
+
+			case CONSOLE_THEME_STATE:
+				sendText(
+					JSON.stringify(getConsoleThemeSnapshot()),
+					reqId,
+					"application/json",
+				);
+				break;
+
 			case EXECUTING_SCRIPT: {
 				const text = getDocText(activeFile?.session?.doc);
 				sendText(text, reqId, "application/javascript");
@@ -235,7 +251,10 @@ async function run(
 						mustache.render($_console, {
 							CONSOLE_SCRIPT,
 							CONSOLE_WORKER_SCRIPT,
+							CONSOLE_THEME_STYLE,
+							CONSOLE_THEME_STATE,
 							EXECUTING_SCRIPT,
+							APP_THEME_TYPE: getConsoleThemeSnapshot().type,
 						}),
 						reqId,
 						MIMETYPE_HTML,
@@ -362,6 +381,13 @@ async function run(
 					break;
 			}
 		}
+	}
+
+	function getConsoleThemeSnapshot() {
+		return {
+			css: document.head.querySelector("style#app-theme")?.textContent || "",
+			type: document.body.getAttribute("theme-type") || "dark",
+		};
 	}
 
 	/**
