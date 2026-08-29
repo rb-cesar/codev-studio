@@ -1,5 +1,29 @@
 # Change Log
 
+## v1.13.2
+
+* feat: stabilize SFTP and add secure SSH terminal integration by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2694
+* fix(lsp): correct workspace and document color capabilities and add tailwind lsp by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2736
+* refactor: Standardize DOM element dataset attributes across file browser component by @AuDevTist1C in https://github.com/Acode-Foundation/Acode/pull/2543
+* fix(lsp): preserve websocket clients across tab switches by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2764
+* feat(plugins): expose static CodeMirror highlighter by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2769
+* refactor(loader): Extract `tailSpin` SVG component and dynamic gradient logic by @AuDevTist1C in https://github.com/Acode-Foundation/Acode/pull/2776
+* fix(quick-tools): prevent scrollbars during editor gestures by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2777
+* fix: fall back to internal storage when external storage is unavailable by @ulite-Amr in https://github.com/Acode-Foundation/Acode/pull/2781
+* fix(theme): prevent freeze when switching to system theme by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2790
+* fix(sftp): cancel stalled connections and prevent delayed errors by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2791
+* fix: admob issues by @deadlyjack in https://github.com/Acode-Foundation/Acode/pull/2800
+* fix(android): avoid splash surface crash on realme Android 13 by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2805
+* fix(session): restore picker documents and skip intent files tab by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2809
+* feat(console): isolate execution and improve mobile REPL UX by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2808
+* feat(console): follow active Acode theme by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2814
+* chore: improve Indonesian (id) language translations by @MatrixTM26 in https://github.com/Acode-Foundation/Acode/pull/2798
+* fix: preserve MIME type for plugin icons on plugin details page by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2818
+* fix(console): run JavaScript files in isolated worker by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2819
+* feat: plugin review by @deadlyjack in https://github.com/Acode-Foundation/Acode/pull/2826
+* Improve selection menu UX and plugin action overflow by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2813
+* fix(search): include restored files in global search by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2830
+
 ## v1.12.9
 
 * fix(admob): remove the policy-prohibited interstitial shown while exiting the app
