@@ -1,5 +1,20 @@
 # Change Log
 
+## v1.13.3
+
+* refactor(file-browser): Replace plain object directory cache with `Map` by @AuDevTist1C in https://github.com/Acode-Foundation/Acode/pull/2831
+* fix(editor): stabilize selection menu sizing and transitions by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2833
+* fix(editor): keep fullscreen controls above bottom pane tabs by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2834
+* chore(community-release-notifier): Change sed parsing - TG release notes by @UnschooledGamer in https://github.com/Acode-Foundation/Acode/pull/2832
+* fix(editor): restore cursor state and prevent tab-switch flash by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2835
+* feat(lsp): improve actions, navigation, and position handling by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2837
+* fix(editor): highlight all visible search matches by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2838
+* Translation: Update hu-hu.json by @summoner001 in https://github.com/Acode-Foundation/Acode/pull/2828
+* chore(deps): bump actions/setup-java from 5 to 6 by @dependabot[bot] in https://github.com/Acode-Foundation/Acode/pull/2821
+* feat: improved pluginContext by @RohitKushvaha01 in https://github.com/Acode-Foundation/Acode/pull/2806
+* fix(webview): retain instance when destroy fails by @azamkassim in https://github.com/Acode-Foundation/Acode/pull/2836
+* fix(sftp): recover from failed profile migration by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2840
+
 ## v1.13.2
 
 * feat: stabilize SFTP and add secure SSH terminal integration by @bajrangCoder in https://github.com/Acode-Foundation/Acode/pull/2694
