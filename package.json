@@ -39,7 +39,6 @@
       "cordova-plugin-buildinfo": {},
       "cordova-plugin-browser": {},
       "cordova-plugin-sftp": {},
-      "com.foxdebug.acode.rk.exec.terminal": {},
       "com.foxdebug.acode.rk.plugin.plugincontext": {},
       "com.foxdebug.acode.rk.auth": {},
       "com.foxdebug.acode.rk.exec.proot": {},
@@ -48,7 +47,8 @@
       "cordova-plugin-crashhandler": {},
       "cordova-plugin-advanced-http": {},
       "cordova-plugin-acode-webview": {},
-      "cordova-plugin-system": {}
+      "cordova-plugin-system": {},
+      "com.foxdebug.acode.rk.exec.terminal": {}
     },
     "platforms": [
       "android"

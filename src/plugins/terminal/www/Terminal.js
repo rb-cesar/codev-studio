@@ -374,7 +374,19 @@ const Terminal = {
 
 
             logger("📦  Extracting sandbox filesystem...");
-            await Executor.execute(`tar --no-same-owner -xf ${filesDir}/alpine.tar.gz -C ${alpineDir}`);
+            // Android forbids hard links in the app directory and Ubuntu ships several.
+            // Running tar under proot turns each hard link into a symlink (--link2symlink),
+            // which is the same mode the sandbox uses at runtime.
+            const extractCmd = [
+                `export LD_LIBRARY_PATH=$PREFIX`,
+                `mkdir -p $PREFIX/tmp`,
+                `export PROOT_TMP_DIR=$PREFIX/tmp`,
+                `if [ "$FDROID" = "true" ]; then L=$PREFIX; chmod +x $PREFIX/*; else L=$NATIVE_DIR; rm -f $PREFIX/libtalloc.so.2; ln -s $NATIVE_DIR/libtalloc.so $PREFIX/libtalloc.so.2; fi`,
+                `export PROOT_LOADER=$L/libproot.so`,
+                `[ -f $L/libproot32.so ] && export PROOT_LOADER32=$L/libproot32.so`,
+                `$L/libproot-xed.so --link2symlink tar --no-same-owner -xf ${filesDir}/alpine.tar.gz -C ${alpineDir}`,
+            ].join("; ");
+            await Executor.execute(extractCmd);
 
             logger("⚙️  Applying basic configuration...");
             // Ubuntu ships resolv.conf as a dangling symlink, so replace it with a real file.
