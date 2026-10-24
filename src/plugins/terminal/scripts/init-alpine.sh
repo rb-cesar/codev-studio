@@ -431,5 +431,7 @@ chmod +x "$PREFIX/alpine/initrc"
 
 if [ "$FAILSAFE" != true ]; then
     #everytime a terminal is started initrc will run
-    "$PREFIX/axs" -c "bash --rcfile /initrc -i"
+    # Codev Studio: random port and token, both private to this app (see Terminal.startAxs)
+    export AXS_TOKEN="$(cat "$PREFIX/.axs_token")"
+    "$PREFIX/axs" -p "$(cat "$PREFIX/.axs_port")" -c "bash --rcfile /initrc -i"
 fi

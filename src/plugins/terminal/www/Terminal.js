@@ -50,6 +50,11 @@ const Terminal = {
         await writeText(`${filesDir}/init-alpine.sh`, initAlpine);
         await writeText(`${filesDir}/init-sandbox.sh`, initSandbox);
 
+        // Codev Studio: random port and token for the local axs server, readable only by this app.
+        await Executor.execute(
+            `umask 077; [ -s $PREFIX/.axs_token ] || head -c 24 /dev/urandom | od -An -tx1 | tr -d " \n" > $PREFIX/.axs_token; [ -s $PREFIX/.axs_port ] || echo $(( $(od -An -N2 -tu2 /dev/urandom | tr -d " ") % 40000 + 20000 )) > $PREFIX/.axs_port; chmod 600 $PREFIX/.axs_token $PREFIX/.axs_port`,
+        );
+
         if (installing) {
             return new Promise((resolve, reject) => {
                 let lastError = "";

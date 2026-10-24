@@ -148,7 +148,7 @@ if [ "$FAILSAFE" = true ] && [ "$INSTALLING" != true ]; then
         LINKER="/system/bin/linker"
     fi
 
-    exec "$LINKER" "$PREFIX/axs" -c "sh"
+    AXS_TOKEN="$(cat "$PREFIX/.axs_token")" exec "$LINKER" "$PREFIX/axs" -p "$(cat "$PREFIX/.axs_port")" -c "sh"
 else
     exec "$PROOT" $ARGS /bin/bash "$PREFIX/init-alpine.sh" "$@"
 fi

@@ -732,6 +732,7 @@ export default class TerminalComponent {
 
 			// A live AXS process does not guarantee that its HTTP listener is ready.
 			// This is especially noticeable during a cold app start.
+			await this.loadAxsAccess();
 			await this.waitForServerReady();
 
 			const requestBody = {
@@ -741,7 +742,7 @@ export default class TerminalComponent {
 
 			const response = await new Promise((resolve, reject) => {
 				cordova.plugin.http.sendRequest(
-					`http://127.0.0.1:${this.options.port}/terminals`,
+					this.axsUrl("/terminals"),
 					{
 						method: "POST",
 						responseType: "text",
@@ -766,12 +767,42 @@ export default class TerminalComponent {
 	}
 
 	/**
+	 * Codev Studio: the local axs server listens on a random port and only answers
+	 * requests that carry a random token. Both live in files private to this app.
+	 */
+	async loadAxsAccess() {
+		if (this.axsToken) return;
+		let lastError;
+		for (let attempt = 0; attempt < 20; attempt++) {
+			try {
+				const out = await Executor.BackgroundExecutor.execute(
+					'printf "%s %s" "$(cat $PREFIX/.axs_port 2>/dev/null)" "$(cat $PREFIX/.axs_token 2>/dev/null)"',
+				);
+				const [port, token] = String(out).trim().split(/s+/);
+				if (/^d+$/.test(port || "") && /^[0-9a-f]{16,}$/.test(token || "")) {
+					this.options.port = Number(port);
+					this.axsToken = token;
+					return;
+				}
+			} catch (error) {
+				lastError = error;
+			}
+			await new Promise((resolve) => setTimeout(resolve, 250));
+		}
+		throw new Error(`Terminal access data not found${lastError ? `: ${lastError}` : ""}`);
+	}
+
+	axsUrl(path, scheme = "http") {
+		return `${scheme}://127.0.0.1:${this.options.port}${path}?token=${this.axsToken}`;
+	}
+
+	/**
 	 * Wait until the AXS HTTP server is accepting requests.
 	 * @param {number} maxAttempts - Maximum number of readiness checks
 	 * @param {number} retryDelay - Delay between checks in milliseconds
 	 */
 	async waitForServerReady(maxAttempts = 20, retryDelay = 500) {
-		const statusUrl = `http://127.0.0.1:${this.options.port}/status`;
+		const statusUrl = this.axsUrl("/status");
 
 		for (let attempt = 0; attempt < maxAttempts; attempt++) {
 			try {
@@ -819,13 +850,14 @@ export default class TerminalComponent {
 			return this.connectToRemoteShell();
 		}
 
+		await this.loadAxsAccess();
 		if (!pid) {
 			pid = await this.createSession();
 		}
 
 		this.pid = pid;
 
-		const wsUrl = `ws://127.0.0.1:${this.options.port}/terminals/${pid}`;
+		const wsUrl = this.axsUrl(`/terminals/${pid}`, "ws");
 
 		await new Promise((resolve, reject) => {
 			const websocket = new WebSocket(wsUrl);
@@ -1057,7 +1089,7 @@ export default class TerminalComponent {
 		try {
 			await new Promise((resolve, reject) => {
 				cordova.plugin.http.sendRequest(
-					`http://127.0.0.1:${this.options.port}/terminals/${this.pid}/resize`,
+					this.axsUrl(`/terminals/${this.pid}/resize`),
 					{
 						method: "POST",
 						serializer: "json",
@@ -1447,7 +1479,7 @@ export default class TerminalComponent {
 			try {
 				await new Promise((resolve, reject) => {
 					cordova.plugin.http.sendRequest(
-						`http://127.0.0.1:${this.options.port}/terminals/${this.pid}/terminate`,
+						this.axsUrl(`/terminals/${this.pid}/terminate`),
 						{
 							method: "POST",
 							data: {}, // Added empty object to satisfy the plugin's type checker
