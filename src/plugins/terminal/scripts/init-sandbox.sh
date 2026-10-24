@@ -150,5 +150,5 @@ if [ "$FAILSAFE" = true ] && [ "$INSTALLING" != true ]; then
 
     exec "$LINKER" "$PREFIX/axs" -c "sh"
 else
-    exec "$PROOT" $ARGS /bin/sh "$PREFIX/init-alpine.sh" "$@"
+    exec "$PROOT" $ARGS /bin/bash "$PREFIX/init-alpine.sh" "$@"
 fi

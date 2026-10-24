@@ -1,5 +1,22 @@
 const Executor = require("./Executor");
 
+// Ubuntu 24.04.5 LTS base images, checked against cdimage.ubuntu.com SHA256SUMS.
+const UBUNTU_BASE_URL = "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/";
+const UBUNTU_BASE = {
+    "arm64-v8a": {
+        url: `${UBUNTU_BASE_URL}ubuntu-base-24.04.5-base-arm64.tar.gz`,
+        sha256: "a91d5a93010193712d346d761372b7c9db6dfcf093893161c64ca107f05914f2",
+    },
+    "armeabi-v7a": {
+        url: `${UBUNTU_BASE_URL}ubuntu-base-24.04.5-base-armhf.tar.gz`,
+        sha256: "4fcee4d278f1c5232e085a021a85e4c6cef3853557a88d98ff380b5e5d5841bb",
+    },
+    "x86_64": {
+        url: `${UBUNTU_BASE_URL}ubuntu-base-24.04.5-base-amd64.tar.gz`,
+        sha256: "e77b6f10c2590cef872b33ee9f635a0e3fd1f57fb074c0e52b5c7f56147a0c86",
+    },
+};
+
 const Terminal = {
     /**
      * Starts the AXS environment by writing init scripts and executing the sandbox.
@@ -15,9 +32,8 @@ const Terminal = {
 
         const failsafeArg = failsafe ? "--failsafe" : "";
 
-        const [initAlpine, rmWrapper, initSandbox] = await Promise.all([
+        const [initAlpine, initSandbox] = await Promise.all([
             readAsset("init-alpine.sh"),
-            readAsset("rm-wrapper.sh"),
             readAsset("init-sandbox.sh"),
         ]);
 
@@ -33,10 +49,6 @@ const Terminal = {
 
         await writeText(`${filesDir}/init-alpine.sh`, initAlpine);
         await writeText(`${filesDir}/init-sandbox.sh`, initSandbox);
-
-        await deleteFile(`${filesDir}/alpine/bin/rm`).catch(() => {});
-        await writeText(`${filesDir}/alpine/bin/rm`, rmWrapper);
-        await setExec(`${filesDir}/alpine/bin/rm`, true);
 
         if (installing) {
             return new Promise((resolve, reject) => {
@@ -329,13 +341,20 @@ const Terminal = {
 
                 logger("✅  All downloads completed");
             }else{
-                logger("📦  Extracting assets...");
-                await new Promise((resolve, reject) => {
-                    system.extractAsset(`alpine_assets/${architecture.libraryDirectory}/alpine.rootfs`, `${filesDir}/alpine.tar.gz`, resolve, (e)=>{
-                        console.error(`Failed to extract alpine.tar.gz: ${formatError(e)}`);
-                        reject(e);
-                    });
-                });
+                // Codev Studio: Ubuntu 24.04 LTS base instead of the bundled Alpine.
+                // The internal directory and file names still say "alpine" to keep the fork small.
+                const ubuntu = UBUNTU_BASE[arch];
+                if (!ubuntu) throw new Error(`No Ubuntu base for architecture: ${arch}`);
+
+                logger("⬇️  Downloading Ubuntu 24.04 (about 30 MB)...");
+                await downloadFile(ubuntu.url, cordova.file.dataDirectory + "alpine.tar.gz", "Ubuntu base");
+
+                const gotHash = String(await Executor.execute(`sha256sum ${filesDir}/alpine.tar.gz | cut -d' ' -f1`)).trim();
+                if (gotHash !== ubuntu.sha256) {
+                    await Executor.execute(`rm -f ${filesDir}/alpine.tar.gz`).catch(() => {});
+                    throw new Error(`Ubuntu base checksum mismatch: ${gotHash}`);
+                }
+                logger("✅  Ubuntu base verified");
 
                 try{
                     await Executor.execute("rm -f $PREFIX/axs && ln -s $NATIVE_DIR/libaxs.so $PREFIX/axs")
@@ -358,12 +377,15 @@ const Terminal = {
             await Executor.execute(`tar --no-same-owner -xf ${filesDir}/alpine.tar.gz -C ${alpineDir}`);
 
             logger("⚙️  Applying basic configuration...");
+            // Ubuntu ships resolv.conf as a dangling symlink, so replace it with a real file.
+            await deleteFile(`${alpineDir}/etc/resolv.conf`).catch(() => {});
             await writeText(`${alpineDir}/etc/resolv.conf`, `nameserver 8.8.4.4 \nnameserver 8.8.8.8`);
 
-            const rmWrapper = await readAsset("rm-wrapper.sh");
-            await deleteFile(`${alpineDir}/bin/rm`).catch(() => {});
-            await writeText(`${alpineDir}/bin/rm`, rmWrapper);
-            await setExec(`${alpineDir}/bin/rm`, true);
+            // apt drops privileges to the _apt user, which proot cannot emulate.
+            await ensureDir(`${alpineDir}/etc/apt/apt.conf.d`);
+            await writeText(`${alpineDir}/etc/apt/apt.conf.d/99codev`, `APT::Sandbox::User "root";\n`);
+
+            // The busybox rm wrapper only made sense on Alpine; Ubuntu keeps GNU rm.
 
             logger("✅  Extraction complete");
             await ensureDir(`${filesDir}/.extracted`);

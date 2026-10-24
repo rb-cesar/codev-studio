@@ -33,23 +33,19 @@ if [ "$INSTALLING" != true ] && [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; then
     exec "$@"
 fi
 
-required_packages="bash command-not-found tzdata wget"
-missing_packages=""
+# Codev Studio: Ubuntu base. Packages are installed once, while installing.
+required_packages="ca-certificates curl wget git nano less tzdata"
 
-for pkg in $required_packages; do
-    if ! apk info -e "$pkg" >/dev/null 2>&1; then
-        missing_packages="$missing_packages $pkg"
-    fi
-done
-
-if [ -n "$missing_packages" ]; then
+if [ "$INSTALLING" = true ]; then
+    export DEBIAN_FRONTEND=noninteractive
     echo -e "\e[34;1m[*] \e[0mInstalling important packages\e[0m"
-    apk update && apk upgrade
-    apk add $missing_packages
+    apt-get update && apt-get install -y --no-install-recommends $required_packages
     if [ $? -eq 0 ]; then
         echo -e "\e[32;1m[+] \e[0mSuccessfully installed\e[0m"
+    else
+        echo -e "\e[31;1m[!] \e[0mPackage installation failed; run: apt-get update && apt-get install $required_packages\e[0m"
     fi
-    echo -e "\e[34m[*] \e[0mUse \e[32mapk\e[0m to install new packages\e[0m"
+    echo -e "\e[34m[*] \e[0mUse \e[32mapt\e[0m to install new packages\e[0m"
 fi
 
 
@@ -87,14 +83,14 @@ fi
 
     if [ ! -e "$PREFIX/alpine/etc/acode_motd" ]; then
         cat <<EOF > "$PREFIX/alpine/etc/acode_motd"
-Welcome to Alpine Linux in Acode!
+Welcome to Ubuntu 24.04 in Codev Studio!
 
 Working with packages:
 
- - Search:  apk search <query>
- - Install: apk add <package>
- - Uninstall: apk del <package>
- - Upgrade: apk update && apk upgrade
+ - Search:  apt search <query>
+ - Install: apt install <package>
+ - Uninstall: apt remove <package>
+ - Upgrade: apt update && apt upgrade
 
 EOF
     fi
@@ -310,17 +306,7 @@ unset __acode_existing_debug_trap __acode_existing_cmd
 # Command-not-found handler
 command_not_found_handle() {
     cmd="$1"
-    pkg=""
-    green="\e[1;32m"
-    reset="\e[0m"
-
-    pkg=$(apk search -x "cmd:$cmd" 2>/dev/null | awk -F'-[0-9]' '{print $1}' | head -n 1)
-
-    if [ -n "$pkg" ]; then
-        echo -e "The program '$cmd' is not installed.\nInstall it by executing:\n ${green}apk add $pkg${reset}" >&2
-    else
-        echo "The program '$cmd' is not installed and no package provides it." >&2
-    fi
+    echo "The program '$cmd' is not installed. Search for it with: apt search $cmd" >&2
 
     return 127
 }
@@ -329,8 +315,8 @@ command_not_found_handle() {
 alias clear='reset'
 
 # Source user configs AFTER defaults (so user can override everything)
-if [ -f /etc/bash/bashrc ]; then
-    source /etc/bash/bashrc
+if [ -f /etc/bash.bashrc ]; then
+    source /etc/bash.bashrc
 fi
 
 if [ -f "$HOME/.bashrc" ]; then
