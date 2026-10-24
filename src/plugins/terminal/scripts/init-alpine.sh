@@ -281,6 +281,9 @@ export TERM=xterm-256color
 SHELL=/bin/bash
 export PIP_BREAK_SYSTEM_PACKAGES=1
 
+# New shells start in the home folder instead of /
+[ "$PWD" = / ] && cd "$HOME"
+
 # Codev Studio: PREFIX points to the Android app directory and makes npm install globals there.
 unset PREFIX
 # Ubuntu's /etc/bash.bashrc runs `groups` unless this file exists, and Android's group IDs are not in /etc/group.
