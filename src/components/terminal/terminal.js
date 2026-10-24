@@ -773,13 +773,15 @@ export default class TerminalComponent {
 	async loadAxsAccess() {
 		if (this.axsToken) return;
 		let lastError;
+		let lastOutput = "";
 		for (let attempt = 0; attempt < 20; attempt++) {
 			try {
 				const out = await Executor.BackgroundExecutor.execute(
-					'printf "%s %s" "$(cat $PREFIX/.axs_port 2>/dev/null)" "$(cat $PREFIX/.axs_token 2>/dev/null)"',
+					'printf "%s %s" "$(cat $PREFIX/.axs_port 2>/dev/null)" "$(cat $PREFIX/.axs_token 2>/dev/null)"; echo',
 				);
-				const [port, token] = String(out).trim().split(/s+/);
-				if (/^d+$/.test(port || "") && /^[0-9a-f]{16,}$/.test(token || "")) {
+				lastOutput = String(out).trim();
+				const [port, token] = lastOutput.split(/\s+/);
+				if (/^\d+$/.test(port || "") && /^[0-9a-f]{16,}$/.test(token || "")) {
 					this.options.port = Number(port);
 					this.axsToken = token;
 					return;
@@ -789,7 +791,9 @@ export default class TerminalComponent {
 			}
 			await new Promise((resolve) => setTimeout(resolve, 250));
 		}
-		throw new Error(`Terminal access data not found${lastError ? `: ${lastError}` : ""}`);
+		throw new Error(
+			`Terminal access data not found (port file: ${/^\d+/.test(lastOutput) ? "ok" : "missing"}, token file: ${/\s[0-9a-f]{16,}$/.test(lastOutput) ? "ok" : "missing"})${lastError ? `: ${lastError}` : ""}`,
+		);
 	}
 
 	axsUrl(path, scheme = "http") {
