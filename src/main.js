@@ -597,6 +597,9 @@ function getUpdateMessage(count) {
 }
 
 async function promptUpdateCheckConsent() {
+	// Codev Studio has no update channel yet, and the Acode one would offer Acode releases.
+	localStorage.setItem("checkForUpdatesPrompted", "true");
+	return;
 	try {
 		if (isPlayStoreInstall()) {
 			localStorage.setItem("checkForUpdatesPrompted", "true");

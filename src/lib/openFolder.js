@@ -25,8 +25,11 @@ import appSettings from "./settings";
 
 const isTermuxSafUri = (value = "") =>
 	value.startsWith("content://com.termux.documents/tree/");
+// The documents provider authority is "<applicationId>.documents", so it follows the app id.
 const isAcodeTerminalPublicSafUri = (value = "") =>
-	value.startsWith("content://com.foxdebug.acode.documents/tree/");
+	value.startsWith(
+		`content://${window.BuildInfo?.packageName || "com.foxdebug.acode"}.documents/tree/`,
+	);
 const isTerminalSafUri = (value = "") =>
 	isTermuxSafUri(value) || isAcodeTerminalPublicSafUri(value);
 
@@ -1266,4 +1269,5 @@ openFolder.find = (url) => {
 	return addedFolder.find((folder) => isInsideOpenFolder(url, folder.url));
 };
 
+export { convertToProotPath };
 export default openFolder;

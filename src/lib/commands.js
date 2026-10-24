@@ -817,6 +817,45 @@ Additional Info:
 			window.toast("Failed to create terminal");
 		}
 	},
+	/**
+	 * Opens a terminal in the first open folder (or the home folder) and starts Claude Code.
+	 */
+	async "claude-code"() {
+		try {
+			const { TerminalManager } = await import(
+				/* webpackChunkName: "terminal" */ "components/terminal"
+			);
+			const { addedFolder, convertToProotPath } = await import(
+				"lib/openFolder"
+			);
+
+			const terminal = await TerminalManager.createTerminal({
+				name: "Claude Code",
+				render: true,
+			});
+			const component = terminal?.component;
+			if (!component) return;
+
+			const startedAt = Date.now();
+			while (!component.isConnected) {
+				if (Date.now() - startedAt > 8000) {
+					throw new Error("Terminal connection timeout");
+				}
+				await new Promise((resolve) => setTimeout(resolve, 50));
+			}
+
+			let command = "claude";
+			const folderUrl = addedFolder[0]?.url;
+			if (folderUrl) {
+				const dir = convertToProotPath(folderUrl).replace(/'/g, "'\\''");
+				command = `cd '${dir}' && claude`;
+			}
+			component.write(`${command}\n`);
+		} catch (error) {
+			console.error("Failed to open Claude Code:", error);
+			window.toast(`Failed to open Claude Code: ${error.message || error}`);
+		}
+	},
 	async "running-processes"() {
 		const { default: RunningProcesses } = await import(
 			"pages/runningProcesses"

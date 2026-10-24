@@ -661,6 +661,16 @@ function registerCoreCommands() {
 		},
 	});
 	addCommand({
+		name: "openClaudeCode",
+		description: "Open Claude Code",
+		readOnly: true,
+		requiresView: false,
+		run() {
+			acode.exec("claude-code");
+			return true;
+		},
+	});
+	addCommand({
 		name: "acode:showWelcome",
 		description: "Show Welcome",
 		readOnly: true,
