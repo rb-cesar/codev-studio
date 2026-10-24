@@ -850,9 +850,11 @@ export default class TerminalComponent {
 			return this.connectToRemoteShell();
 		}
 
-		await this.loadAxsAccess();
+		// createSession starts axs when needed and loads the access data itself.
 		if (!pid) {
 			pid = await this.createSession();
+		} else {
+			await this.loadAxsAccess();
 		}
 
 		this.pid = pid;
