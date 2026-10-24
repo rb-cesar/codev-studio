@@ -284,6 +284,11 @@ export PIP_BREAK_SYSTEM_PACKAGES=1
 # New shells start in the home folder instead of /
 [ "$PWD" = / ] && cd "$HOME"
 
+# TMPDIR comes from Android and points to the app cache folder, which is group-writable
+# without the sticky bit; Claude Code refuses to put its socket there.
+export TMPDIR=/tmp
+[ "$(stat -c %a /tmp)" = 1777 ] || chmod 1777 /tmp
+
 # Codev Studio: PREFIX points to the Android app directory and makes npm install globals there.
 unset PREFIX
 # Ubuntu's /etc/bash.bashrc runs `groups` unless this file exists, and Android's group IDs are not in /etc/group.
