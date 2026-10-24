@@ -176,6 +176,93 @@ ACODE_CLI
         chmod +x "$PREFIX/alpine/usr/local/bin/acode"
     fi
 
+    # Codev Studio: `code [path...]` opens a folder or file in the app, like VS Code's CLI.
+    # Rewritten on every start so that improvements reach existing installs.
+    mkdir -p "$PREFIX/alpine/usr/local/bin"
+    cat <<'CODE_CLI' > "$PREFIX/alpine/usr/local/bin/code"
+#!/bin/bash
+# code - open files and folders in Codev Studio (same idea as VS Code's `code [path]`).
+# It prints an OSC 7777 escape sequence. Only the terminal that shows this output
+# sees it, so no network port is involved and other apps cannot trigger it.
+
+usage() {
+    cat <<'USAGE'
+Usage: code [options] [path...]
+
+Open a folder in the sidebar or a file in the editor of Codev Studio.
+With no path, the current folder is opened.
+
+Examples:
+  code .                 # open the current folder
+  code ~/projetos/rea    # open a folder
+  code src/main.js       # open a file (also file:line)
+
+Options:
+  -h, --help             show this help
+  -v, --version          show the version
+  -r, -n, -w, -g         accepted for VS Code compatibility, no effect
+USAGE
+}
+
+# Inside the sandbox /root and /home are the same folder as /public.
+to_app_path() {
+    case "$1" in
+        /root|/root/*) echo "/public${1#/root}" ;;
+        /home|/home/*) echo "/public${1#/home}" ;;
+        *) echo "$1" ;;
+    esac
+}
+
+open_one() {
+    local arg="$1" abs type trimmed i
+
+    # file:line[:column], as in `code -g`; the position is ignored for now
+    if [[ ! -e "$arg" ]]; then
+        trimmed="$arg"
+        for i in 1 2; do
+            [[ "$trimmed" =~ ^(.+):[0-9]+$ ]] || break
+            trimmed="${BASH_REMATCH[1]}"
+            if [[ -e "$trimmed" ]]; then
+                arg="$trimmed"
+                break
+            fi
+        done
+    fi
+
+    if [[ ! -e "$arg" ]]; then
+        echo "code: '$arg' does not exist" >&2
+        return 1
+    fi
+
+    abs=$(realpath -- "$arg" 2>/dev/null) || abs="$PWD/$arg"
+    type="file"
+    [[ -d "$abs" ]] && type="folder"
+
+    printf '\e]7777;open;%s;%s\a' "$type" "$(to_app_path "$abs")"
+}
+
+paths=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -v|--version) echo "Codev Studio code CLI"; exit 0 ;;
+        -r|--reuse-window|-n|--new-window|-w|--wait|-g|--goto) shift ;;
+        --) shift; paths+=("$@"); break ;;
+        -*) echo "code: unknown option '$1'" >&2; exit 1 ;;
+        *) paths+=("$1"); shift ;;
+    esac
+done
+
+[[ ${#paths[@]} -eq 0 ]] && paths=(".")
+
+status=0
+for p in "${paths[@]}"; do
+    open_one "$p" || status=1
+done
+exit $status
+CODE_CLI
+    chmod +x "$PREFIX/alpine/usr/local/bin/code"
+
     # Create initrc if it doesn't exist
     #initrc runs in bash so we can use bash features
 if [ ! -e "$PREFIX/alpine/initrc" ]; then
