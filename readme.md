@@ -1,78 +1,28 @@
-# Acode - Code Editor for Android
+# Codev Studio
 
-<p align="center">
-  <img src='res/logo_1.png' width='250'>
-</p>
+Editor de código e terminal Linux no mesmo app Android, feito sobre o [Acode](https://github.com/Acode-Foundation/Acode) (licença MIT).
 
-[![](https://img.shields.io/endpoint?logo=telegram&label=Acode&style=flat&url=https%3A%2F%2Facode.app%2Fapi%2Ftelegram-members-count)](https://t.me/foxdebug_acode) [![](https://dcbadge.limes.pink/api/server/https://discord.gg/vVxVWYUAWD?style=flat)](https://discord.gg/vVxVWYUAWD)
+A ideia é ter no celular um ambiente de desenvolvimento completo: abrir o projeto, editar, rodar comandos num Ubuntu e usar o Claude Code, tudo no mesmo app.
 
-## • Overview
+> Projeto pessoal em desenvolvimento. Por enquanto gera apenas o APK de Android para arm64.
 
-Welcome to Acode Editor - a powerful and versatile code editing tool designed specifically for Android devices. Whether you're working on HTML, CSS, JavaScript, or other programming languages, Acode empowers you to code on-the-go with confidence.
+## O que muda em relação ao Acode
 
-## • Features
+- **Ubuntu 24.04 no terminal.** O terminal embutido do Acode usa Alpine. Aqui ele roda Ubuntu via proot, com `apt` e alguns pacotes básicos já instalados (git, curl, wget, nano).
+- **Claude Code no menu.** Um item fixo abre um terminal na pasta do projeto aberto e inicia o `claude`. O ambiente do terminal foi ajustado para ele funcionar: `/tmp` com as permissões que ele exige, shells começando na pasta pessoal e `npm` instalando pacotes globais dentro do Ubuntu. O Claude Code em si é instalado pelo usuário, com Node.js e `npm install -g @anthropic-ai/claude-code`.
+- **Comando `code`.** Funciona como o `code` do VS Code: `code .` abre a pasta atual na barra lateral e `code src/main.js` abre o arquivo no editor. A comunicação com o app é feita por uma sequência de escape do próprio terminal, sem abrir porta de rede.
+- **Terminal local protegido.** O servidor local que conecta o app ao terminal passou a usar porta aleatória e um token por instalação, guardados em arquivos privados do app. Assim, outros apps do celular não conseguem abrir sessões no terminal.
+- **Identidade própria.** Novo id de pacote (`dev.codev.studio`), nome, esquema de link (`codevstudio://`) e provedor de arquivos, para poder instalar junto com o Acode original. A verificação de atualização do Acode foi removida.
 
-- Edit and create websites, and instantly preview them in a browser.
-- Seamlessly modify source files for various languages like Python, Java, JavaScript, and more.
-- Built-in javascript console
-- S/FTP and SSH terminal integration
-- Built-in terminal(Alpine)
-- Enjoy multi-language editing support with easy management tools.
-- Enjoy a large collections of community plugins to enhance your coding experience.
+## Próximos passos
 
-## • Installation
+- Interface própria para o Claude Code, além do terminal.
+- Acesso remoto ao PC a partir do app, por SSH dentro de uma VPN, para trabalhar nos projetos do computador pelo celular.
 
-You can get Acode Editor from popular platforms:
+## Build
 
-[<img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" alt="Get it on Google Play" height="60">](https://play.google.com/store/apps/details?id=com.foxdebug.acodefree) [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="60"/>](https://www.f-droid.org/packages/com.foxdebug.acode/)
+O processo é o mesmo do Acode, descrito em [CONTRIBUTING.md](CONTRIBUTING.md). Clone com `--recurse-submodules`, porque o `codemirror-lsp-client` é um submódulo. O build está limitado a `arm64-v8a` (em `build-extras.gradle`), que é a arquitetura em que o servidor do terminal tem a verificação de token.
 
-## • Project Structure
+## Créditos e licença
 
-<pre>
-Acode/
-|
-|- src/   - Core code and language files
-|
-|- www/   - Public documents, compiled files, and HTML templates
-|
-|- utils/ - CLI tools for building, string manipulation, and more
-|
-|- codemirror-lsp-client/ - Git submodule providing @codemirror/lsp-client (clone with --recurse-submodules)
-</pre>
-
-## • Multi-language Support
-
-Enhance Acode's capabilities by adding new languages easily. Just create a file with the language code (e.g., en-us for English) in [`src/lang/`](https://github.com/Acode-Foundation/Acode/tree/main/src/lang) and include it in [`src/lib/lang.js`](https://github.com/Acode-Foundation/Acode/blob/main/src/lib/lang.js). Manage strings across languages effortlessly using utility commands:
-
-```shell
-pnpm run lang add
-pnpm run lang remove
-pnpm run lang search
-pnpm run lang update
-```
-
-## • Contributing & Building the Application
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions.
-
-## • Contributors
-
-<a href="https://github.com/Acode-Foundation/Acode/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Acode-Foundation/Acode" />
-</a>
-
-## • Developing a Plugin for Acode
-
-For comprehensive documentation on creating plugins for Acode Editor, visit the [repository](https://github.com/Acode-Foundation/acode-plugin).
-
-For plugin development information, refer to: [Acode Plugin Documentation](https://docs.acode.app/)
-
-## Star History
-
-<a href="https://star-history.com/#Acode-Foundation/Acode&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Acode-Foundation/Acode&type=Date" />
- </picture>
-</a>
+Baseado no [Acode](https://github.com/Acode-Foundation/Acode), de Foxdebug (Ajit Kumar) e da Acode Foundation, distribuído sob a licença MIT ([license.txt](license.txt)). As alterações deste repositório seguem a mesma licença.
