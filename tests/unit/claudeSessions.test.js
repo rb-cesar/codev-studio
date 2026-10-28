@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+	LIST_FOLDERS_SCRIPT,
 	LIST_SESSIONS_SCRIPT,
 	LOAD_SESSION_SCRIPT,
 	RENAME_SESSION_SCRIPT,
@@ -273,6 +274,36 @@ describe("load session script", () => {
 	});
 });
 
+describe("list folders script", () => {
+	it("lists folders two levels deep, skipping hidden ones and node_modules", () => {
+		const base = path.join(home, "base");
+		for (const dir of [
+			"projetos/rea/docs",
+			"projetos/site",
+			"estudos",
+			".cache/x",
+			"node_modules/pkg",
+			"projetos/node_modules",
+		]) {
+			fs.mkdirSync(path.join(base, dir), { recursive: true });
+		}
+		fs.writeFileSync(path.join(base, "arquivo.txt"), "x");
+
+		expect(runScript(LIST_FOLDERS_SCRIPT, [base])).toEqual([
+			"estudos",
+			"projetos",
+			"projetos/rea",
+			"projetos/site",
+		]);
+	});
+
+	it("returns an empty list for a missing folder", () => {
+		expect(runScript(LIST_FOLDERS_SCRIPT, [path.join(home, "nada")])).toEqual(
+			[],
+		);
+	});
+});
+
 describe("rename session script", () => {
 	it("appends a custom title that wins over the earlier ones", () => {
 		const file = writeSession("-public", "r-1", [
@@ -341,6 +372,20 @@ describe("SessionStore", () => {
 		expect(calls[0].command.startsWith("'node' '-e'")).toBe(true);
 	});
 
+	it("lists folders of the home through the executor", async () => {
+		const calls = [];
+		const executor = {
+			execute: async (command, alpine) => {
+				calls.push({ command, alpine });
+				return '@@JSON@@["projetos","projetos/rea"]';
+			},
+		};
+		const names = await new SessionStore(executor).folders();
+		expect(names).toEqual(["projetos", "projetos/rea"]);
+		expect(calls[0].alpine).toBe(true);
+		expect(calls[0].command.endsWith(" '/public'")).toBe(true);
+	});
+
 	it("rejects ids that are not plain identifiers", async () => {
 		const store = new SessionStore({ execute: async () => "" });
 		await expect(store.load("../x")).rejects.toThrow();
@@ -351,8 +396,8 @@ describe("SessionStore", () => {
 
 describe("display helpers", () => {
 	it("names the folder of a session", () => {
-		expect(folderLabel("/public")).toBe("Pasta pessoal");
-		expect(folderLabel(null)).toBe("Pasta pessoal");
+		expect(folderLabel("/public")).toBe("Home do Ubuntu");
+		expect(folderLabel(null)).toBe("Home do Ubuntu");
 		expect(folderLabel("/public/projetos/rea/docs")).toBe("rea/docs");
 		expect(folderLabel("/public/rea")).toBe("rea");
 		expect(folderLabel("/storage/emulated/0/Dev")).toBe("0/Dev");

@@ -1,5 +1,6 @@
 import { DEFAULT_CWD } from "./claudeProcess";
 import {
+	LIST_FOLDERS_SCRIPT,
 	LIST_SESSIONS_SCRIPT,
 	LOAD_SESSION_SCRIPT,
 	OUTPUT_MARKER,
@@ -53,15 +54,15 @@ export function sessionTitle(session, max = 70) {
 
 /**
  * Short, readable name for a sandbox folder: the last two path segments,
- * or "Pasta pessoal" for the sandbox home.
+ * or "Home do Ubuntu" for the sandbox home.
  */
 export function folderLabel(cwd) {
-	if (!cwd || cwd === DEFAULT_CWD || cwd === "/") return "Pasta pessoal";
+	if (!cwd || cwd === DEFAULT_CWD || cwd === "/") return "Home do Ubuntu";
 	const parts = cwd
 		.replace(/^\/public\//, "")
 		.split("/")
 		.filter(Boolean);
-	return parts.slice(-2).join("/") || "Pasta pessoal";
+	return parts.slice(-2).join("/") || "Home do Ubuntu";
 }
 
 /** "agora", "há 5 min", "há 3 h", "ontem", "há 4 d" or a date. */
@@ -102,6 +103,18 @@ export default class SessionStore {
 	async list() {
 		const sessions = await this.run(LIST_SESSIONS_SCRIPT, []);
 		return Array.isArray(sessions) ? sessions : [];
+	}
+
+	/**
+	 * Folders below `base` (two levels), relative to it.
+	 * @param {string} [base] defaults to the Ubuntu home
+	 * @returns {Promise<string[]>}
+	 */
+	async folders(base = DEFAULT_CWD) {
+		const names = await this.run(LIST_FOLDERS_SCRIPT, [base]);
+		return Array.isArray(names)
+			? names.filter((name) => typeof name === "string")
+			: [];
 	}
 
 	/**

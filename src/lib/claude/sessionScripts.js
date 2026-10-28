@@ -179,6 +179,33 @@ for (const e of parseLines(fs.readFileSync(file, "utf8"), false, false)) {
 print({ cwd, entries: entries.slice(-limit) });
 `;
 
+/**
+ * Prints the folders below argv[1] (the sandbox home), up to two levels deep, as paths
+ * relative to it: ["projetos", "projetos/rea", ...]. Hidden folders and node_modules are skipped.
+ */
+export const LIST_FOLDERS_SCRIPT = `${COMMON}
+const base = process.argv[1] || "/public";
+const SKIP = new Set(["node_modules", "snap"]);
+
+function subdirs(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !e.name.startsWith(".") && !SKIP.has(e.name))
+      .map((e) => e.name)
+      .sort((a, b) => a.localeCompare(b));
+  } catch (e) {
+    return [];
+  }
+}
+
+const out = [];
+for (const first of subdirs(base)) {
+  out.push(first);
+  for (const second of subdirs(path.join(base, first))) out.push(first + "/" + second);
+}
+print(out.slice(0, 300));
+`;
+
 /** Appends a custom title to a session (argv[1] = id, argv[2] = title). */
 export const RENAME_SESSION_SCRIPT = `${COMMON}
 const id = process.argv[1];

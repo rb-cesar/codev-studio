@@ -1,11 +1,9 @@
 import confirm from "dialogs/confirm";
 import prompt from "dialogs/prompt";
-import select from "dialogs/select";
 import DOMPurify from "dompurify";
 import actionStack from "lib/actionStack";
 import ChatModel, { summarizeToolUse } from "lib/claude/chatModel";
 import ClaudeProcess, { DEFAULT_CWD } from "lib/claude/claudeProcess";
-import { sandboxPathFor } from "lib/claude/folderPath";
 import SessionStore, {
 	folderLabel,
 	formatRelativeTime,
@@ -35,65 +33,6 @@ function clip(text) {
 		: value;
 }
 
-function escapeHtml(text) {
-	return String(text)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
-}
-
-/**
- * Folders a new session can work in: the open folders (the one holding the file being
- * edited first), then the sandbox home for a session without a project. `hidden` names
- * the open folders the Ubuntu sandbox cannot see.
- * @returns {Promise<{ choices: Array<{ cwd: string, label: string }>, hidden: string[] }>}
- */
-async function folderChoices() {
-	const choices = [];
-	const hidden = [];
-	try {
-		const { addedFolder, convertToProotPath } = await import("lib/openFolder");
-		const { default: Uri } = await import("utils/Uri");
-		const toPath = (url) =>
-			sandboxPathFor(url, {
-				parseUri: (value) => Uri.parse(value),
-				toProotPath: convertToProotPath,
-				packageName: window.BuildInfo?.packageName,
-			});
-		const activeUri = globalThis.editorManager?.activeFile?.uri;
-		const activePath = activeUri ? toPath(activeUri) : null;
-
-		for (const folder of addedFolder) {
-			const cwd = toPath(folder.url);
-			if (!cwd) {
-				hidden.push(folder.title || folder.url);
-				continue;
-			}
-			if (choices.some((choice) => choice.cwd === cwd)) continue;
-			const base = cwd.replace(/\/$/, "");
-			choices.push({
-				cwd,
-				label: folderLabel(cwd),
-				holdsActiveFile:
-					!!activePath &&
-					(activePath === cwd || activePath.startsWith(`${base}/`)),
-			});
-		}
-		// The folder holding the open file comes first; among several, the deepest one.
-		choices.sort(
-			(a, b) =>
-				Number(b.holdsActiveFile) - Number(a.holdsActiveFile) ||
-				(a.holdsActiveFile ? b.cwd.length - a.cwd.length : 0),
-		);
-	} catch (error) {
-		console.warn("Claude: could not list the open folders", error);
-	}
-	if (!choices.some((choice) => choice.cwd === DEFAULT_CWD)) {
-		choices.push({ cwd: DEFAULT_CWD, label: folderLabel(DEFAULT_CWD) });
-	}
-	return { choices, hidden };
-}
-
 /**
  * Builds the chat UI and wires it to a claude process.
  * @returns {{ element: HTMLElement, dispose: () => void }}
@@ -110,8 +49,7 @@ export function createClaudeChat() {
 	let logTail = [];
 	let stickToBottom = true;
 	let renderQueued = false;
-	/** Open folders the Ubuntu sandbox cannot see, shown while the session is empty. */
-	let hiddenFolders = [];
+	let folderRequest = 0;
 
 	/** message id -> { el, blocks: Array<{ el, sig, seq }> } */
 	const entries = new Map();
@@ -124,8 +62,6 @@ export function createClaudeChat() {
 		"claude-chat-empty",
 		"Converse com o Claude Code. Ele trabalha na pasta mostrada no topo.",
 	);
-	const emptyNote = el("div", "claude-chat-empty-note");
-	empty.append(emptyNote);
 	list.append(empty);
 	const status = el("div", "claude-chat-status");
 	const form = el("form", "claude-chat-composer");
@@ -162,7 +98,13 @@ export function createClaudeChat() {
 	const panelList = el("div", "claude-sessions-list");
 	panel.append(panelHead, panelList);
 
-	root.append(header, list, status, form, panel);
+	// Folder popup: opens under the header button, tapping outside closes it.
+	const folderBackdrop = el("div", "claude-folders-backdrop");
+	folderBackdrop.hidden = true;
+	const folderMenu = el("div", "claude-folders");
+	folderMenu.hidden = true;
+
+	root.append(header, list, status, form, panel, folderBackdrop, folderMenu);
 
 	list.addEventListener("scroll", () => {
 		stickToBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
@@ -270,10 +212,6 @@ export function createClaudeChat() {
 	function renderMessages() {
 		renderQueued = false;
 		empty.hidden = model.messages.length > 0;
-		emptyNote.hidden = empty.hidden || !hiddenFolders.length;
-		emptyNote.textContent = hiddenFolders.length
-			? `O Ubuntu do app não enxerga ${hiddenFolders.map((name) => `"${name}"`).join(", ")} (só armazenamento interno, cartão SD e a pasta pessoal). Abra o projeto pelo armazenamento interno ou clone-o na pasta pessoal.`
-			: "";
 
 		for (const message of model.messages) {
 			let entry = entries.get(message.id);
@@ -323,9 +261,16 @@ export function createClaudeChat() {
 		scheduleRender();
 	});
 
+	/** The folder can change only before the first message: Claude Code keeps a session per folder. */
+	function canPickFolder() {
+		return !session.id && !model.messages.length && !model.busy && !loading;
+	}
+
 	function updateHeader() {
 		titleLabel.textContent = session.custom || session.title || "Nova conversa";
-		folderLabelEl.textContent = folderLabel(session.cwd);
+		folderLabelEl.textContent = canPickFolder()
+			? `${folderLabel(session.cwd)} ▾`
+			: folderLabel(session.cwd);
 		titleButton.title = session.cwd;
 	}
 
@@ -439,23 +384,18 @@ export function createClaudeChat() {
 
 	/**
 	 * Starts an empty session in `cwd`.
-	 * @param {string} [cwd] defaults to the folder holding the open file
+	 * @param {string} [cwd] defaults to the Ubuntu home
 	 */
 	async function startNewSession(cwd) {
 		if (loading || !(await confirmLeaving())) return;
+		closeFolderMenu();
 		await stopProcess();
 		model.reset();
 		clearView();
 		session.id = null;
 		session.title = null;
 		session.custom = null;
-		if (cwd) {
-			session.cwd = cwd;
-		} else {
-			const { choices, hidden } = await folderChoices();
-			session.cwd = choices[0].cwd;
-			hiddenFolders = hidden;
-		}
+		session.cwd = cwd || DEFAULT_CWD;
 		scheduleRender();
 		input.focus();
 	}
@@ -463,6 +403,7 @@ export function createClaudeChat() {
 	/** Opens a stored session and shows its history. */
 	async function openSession(info) {
 		if (loading || !(await confirmLeaving())) return;
+		closeFolderMenu();
 		await stopProcess();
 		model.reset();
 		clearView();
@@ -507,25 +448,64 @@ export function createClaudeChat() {
 		return true;
 	}
 
-	/** Lets the user pick the folder of a session that has not started yet. */
-	async function chooseFolder() {
-		if (session.id || model.messages.length || model.busy) return;
-		const { choices, hidden } = await folderChoices();
-		hiddenFolders = hidden;
-		scheduleRender();
-		const picked = await select(
-			"Pasta da sessão",
-			choices.map((choice) => ({
-				value: choice.cwd,
-				text: escapeHtml(choice.label),
-				subText: choice.cwd,
-				icon: "folder",
-			})),
-			{ default: session.cwd },
-		);
-		if (picked) {
-			session.cwd = picked;
+	function closeFolderMenu() {
+		folderRequest++;
+		if (folderMenu.hidden) return;
+		folderMenu.hidden = true;
+		folderBackdrop.hidden = true;
+		actionStack.remove("claude-folders");
+	}
+
+	function folderRow(cwd, title, sub) {
+		const row = el("button", "claude-folder-item");
+		row.type = "button";
+		row.classList.toggle("current", cwd === session.cwd);
+		row.append(el("span", "claude-folder-title", title));
+		if (sub) row.append(el("span", "claude-folder-sub", sub));
+		row.addEventListener("click", () => {
+			session.cwd = cwd;
+			closeFolderMenu();
 			scheduleRender();
+		});
+		return row;
+	}
+
+	/** Popup to pick the folder of a session that has not started yet; the Ubuntu home comes first. */
+	async function chooseFolder() {
+		if (!folderMenu.hidden) {
+			closeFolderMenu();
+			return;
+		}
+		if (!canPickFolder()) return;
+		const request = ++folderRequest;
+		folderMenu.style.top = `${header.offsetHeight}px`;
+		folderMenu.hidden = false;
+		folderBackdrop.hidden = false;
+		actionStack.push({ id: "claude-folders", action: closeFolderMenu });
+
+		const home = folderRow(DEFAULT_CWD, folderLabel(DEFAULT_CWD), DEFAULT_CWD);
+		const note = (text, className = "") =>
+			el("div", `claude-folders-note ${className}`.trim(), text);
+		folderMenu.replaceChildren(home, note("Carregando pastas…"));
+		try {
+			const names = await store.folders(DEFAULT_CWD);
+			if (request !== folderRequest) return;
+			folderMenu.replaceChildren(
+				home,
+				...names.map((name) => folderRow(`${DEFAULT_CWD}/${name}`, name)),
+			);
+			if (!names.length) {
+				folderMenu.append(note("Nenhuma pasta dentro da home ainda."));
+			}
+		} catch (error) {
+			if (request !== folderRequest) return;
+			folderMenu.replaceChildren(
+				home,
+				note(
+					`Não foi possível listar as pastas: ${error?.message || error}`,
+					"error",
+				),
+			);
 		}
 	}
 
@@ -598,6 +578,7 @@ export function createClaudeChat() {
 
 	sessionsButton.addEventListener("click", showSessions);
 	closePanelButton.addEventListener("click", closePanel);
+	folderBackdrop.addEventListener("click", closeFolderMenu);
 	newButton.addEventListener("click", () => startNewSession());
 	titleButton.addEventListener("click", () => {
 		if (session.id) {
@@ -627,19 +608,12 @@ export function createClaudeChat() {
 	stopButton.addEventListener("click", stopTurn);
 
 	renderMessages();
-	folderChoices().then(({ choices, hidden }) => {
-		// Open folders may not be known yet when the tab opens; pick the default once.
-		if (!session.id && !model.messages.length) {
-			session.cwd = choices[0].cwd;
-			hiddenFolders = hidden;
-			scheduleRender();
-		}
-	});
 
 	return {
 		element: root,
 		dispose() {
 			closePanel();
+			closeFolderMenu();
 			stopProcess();
 		},
 	};

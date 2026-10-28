@@ -153,6 +153,77 @@ export default `.claude-chat {
 	font-size: 13px;
 }
 
+.claude-folders-backdrop {
+	position: absolute;
+	inset: 0;
+	z-index: 6;
+}
+
+.claude-folders {
+	position: absolute;
+	left: 8px;
+	right: 8px;
+	z-index: 7;
+	max-height: 60%;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	border: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+	border-radius: 12px;
+	background: var(--secondary-color, #313131);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.claude-folder-item {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 1px;
+	width: 100%;
+	min-height: 48px;
+	padding: 6px 14px;
+	border: none;
+	border-bottom: 1px solid var(--border-color, rgba(204, 204, 204, 0.2));
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+}
+
+.claude-folder-item:last-child {
+	border-bottom: none;
+}
+
+.claude-folder-item.current {
+	box-shadow: inset 3px 0 0 var(--active-color, #888);
+}
+
+.claude-folder-item.current .claude-folder-title::after {
+	content: " ✓";
+}
+
+.claude-folder-title {
+	font-weight: 600;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.claude-folder-sub {
+	font-size: 12px;
+	opacity: 0.7;
+}
+
+.claude-folders-note {
+	padding: 12px 14px;
+	font-size: 13px;
+	opacity: 0.7;
+}
+
+.claude-folders-note.error {
+	color: var(--error-text-color, #ff9b9b);
+	opacity: 1;
+}
+
 .claude-chat-messages {
 	flex: 1;
 	min-height: 0;
@@ -170,12 +241,6 @@ export default `.claude-chat {
 	max-width: 22em;
 	text-align: center;
 	opacity: 0.7;
-}
-
-.claude-chat-empty-note {
-	margin-top: 10px;
-	font-size: 13px;
-	color: var(--error-text-color, #ff9b9b);
 }
 
 .claude-msg {

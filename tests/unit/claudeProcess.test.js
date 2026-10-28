@@ -1,3 +1,4 @@
+import { execFileSync, spawnSync } from "node:child_process";
 import ClaudeProcess, { buildClaudeCommand } from "lib/claude/claudeProcess";
 import { describe, expect, it, vi } from "vitest";
 
@@ -42,6 +43,25 @@ describe("buildClaudeCommand", () => {
 
 	it("refuses folder names with line breaks", () => {
 		expect(() => buildClaudeCommand({ cwd: "/public/a\nb" })).toThrow();
+	});
+});
+
+describe("buildClaudeCommand folder handling", () => {
+	it("fails loudly instead of falling back to another folder", () => {
+		const command = buildClaudeCommand({ cwd: "/nao/existe" });
+		const result = spawnSync("/bin/sh", ["-c", command], { encoding: "utf8" });
+		expect(result.status).toBe(97);
+		expect(result.stderr).toContain("/nao/existe");
+	});
+
+	it("starts the program in the requested folder", () => {
+		const command = buildClaudeCommand({ cwd: "/tmp" }).replace(
+			/'claude'.*$/s,
+			"'pwd'",
+		);
+		expect(
+			execFileSync("/bin/sh", ["-c", command], { encoding: "utf8" }).trim(),
+		).toBe("/tmp");
 	});
 });
 
