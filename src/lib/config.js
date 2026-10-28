@@ -35,11 +35,11 @@ const config = {
 		"platinum",
 		"titanium",
 	]),
-	LOG_FILE_NAME: "Acode.log",
+	LOG_FILE_NAME: "CodevStudio.log",
 
 	// Social Links
 	DOCS_URL: "https://docs.acode.app",
-	GITHUB_URL: "https://github.com/Acode-Foundation/Acode",
+	GITHUB_URL: "https://github.com/rb-cesar/codev-studio",
 	TELEGRAM_URL: "https://t.me/foxdebug_acode",
 	DISCORD_URL: "https://discord.gg/nDqZsh7Rqz",
 	TWITTER_URL: "https://x.com/foxbiz_io",

@@ -4,7 +4,7 @@ import Page from "components/page";
 import Reactive from "html-tag-js/reactive";
 import actionStack from "lib/actionStack";
 import config from "lib/config";
-import helpers from "utils/helpers";
+
 export default function AboutInclude() {
 	const $page = Page(strings.about.capitalize());
 	const webviewVersionName = Reactive("N/A");
@@ -16,13 +16,36 @@ export default function AboutInclude() {
 			<Logo />
 
 			<div className="version-info">
-				<h1 className="version-title">Acode editor</h1>
+				<h1 className="version-title">Codev Studio</h1>
 				<div className="version-number">
-					Version {BuildInfo.version} ({BuildInfo.versionCode})
+					Versão {BuildInfo.version} ({BuildInfo.versionCode})
+				</div>
+				<div className="version-number">
+					Editor de código e terminal Linux no celular
 				</div>
 			</div>
 
 			<div className="info-section">
+				<a href={config.GITHUB_URL} className="info-item">
+					<div className="info-item-icon">
+						<span className="icon github"></span>
+					</div>
+					<div className="info-item-text">
+						Código-fonte
+						<div className="info-item-subtext">{config.GITHUB_URL}</div>
+					</div>
+				</a>
+				<a href="https://github.com/Acode-Foundation/Acode" className="info-item">
+					<div className="info-item-icon">
+						<span className="icon acode"></span>
+					</div>
+					<div className="info-item-text">
+						Baseado no Acode (licença MIT)
+						<div className="info-item-subtext">
+							Foxdebug e Acode Foundation
+						</div>
+					</div>
+				</a>
 				<a
 					href="#"
 					className="info-item"
@@ -40,63 +63,6 @@ export default function AboutInclude() {
 						Webview {webviewVersionName}
 						<div className="info-item-subtext">{webviewPackageName}</div>
 					</div>
-				</a>
-				<a href={config.BASE_URL} className="info-item">
-					<div className="info-item-icon">
-						<span className="icon acode"></span>
-					</div>
-					<div className="info-item-text">
-						Official webpage
-						<div className="info-item-subtext">{config.BASE_URL}</div>
-					</div>
-				</a>
-				<a href={config.FOXBIZ_URL} className="info-item">
-					<div className="info-item-icon">
-						<span className="icon foxbiz"></span>
-					</div>
-					<div className="info-item-text">
-						Foxbiz Software Pvt. Ltd.
-						<div className="info-item-subtext">{config.FOXBIZ_URL}</div>
-					</div>
-				</a>
-			</div>
-
-			<div className="social-links">
-				<a href="mailto:apps@foxdebug.com" className="social-link">
-					<div className="social-icon">
-						<span className="icon gmail"></span>
-					</div>
-					Mail
-				</a>
-				<a href={config.TWITTER_URL} className="social-link">
-					<div className="social-icon">
-						<span className="icon twitter"></span>
-					</div>
-					Twitter
-				</a>
-				<a href={config.INSTAGRAM_URL} className="social-link">
-					<div className="social-icon">
-						<span className="icon instagram"></span>
-					</div>
-					Instagram
-				</a>
-				<a href={config.GITHUB_URL} className="social-link">
-					<div className="social-icon">
-						<span className="icon github"></span>
-					</div>
-					GitHub
-				</a>
-				<a href={config.TELEGRAM_URL} className="social-link">
-					<div className="social-icon">
-						<span className="icon telegram"></span>
-					</div>
-					Telegram
-				</a>
-				<a href={config.DISCORD_URL} className="social-link">
-					<div className="social-icon">
-						<span className="icon discord"></span>
-					</div>
-					Discord
 				</a>
 			</div>
 		</main>
@@ -117,5 +83,4 @@ export default function AboutInclude() {
 	};
 
 	app.append($page);
-	helpers.showAd();
 }

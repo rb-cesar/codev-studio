@@ -81,7 +81,7 @@ export default function otherSettings() {
 			},
 			info:
 				strings["settings-info-app-ui-zoom"] ||
-				"Scale text across the Acode interface.",
+				"Scale text across the Codev Studio interface.",
 			category: categories.interface,
 		},
 		{

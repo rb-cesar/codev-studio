@@ -82,21 +82,13 @@ public class System extends CordovaPlugin {
   static {
     Map<String, String> aliases = new HashMap<>();
     aliases.put("default", "MainActivityIconDefault");
-    aliases.put("pro", "MainActivityIconPro");
-    aliases.put("midnight_circuit", "MainActivityIconMidnightCircuit");
-    aliases.put("aurora_pulse", "MainActivityIconAuroraPulse");
-    aliases.put("terminal_glow", "MainActivityIconTerminalGlow");
-    aliases.put("solar_flare", "MainActivityIconSolarFlare");
-    aliases.put("blueprint", "MainActivityIconBlueprint");
-    aliases.put("pixel_party", "MainActivityIconPixelParty");
-    aliases.put("prism", "MainActivityIconPrism");
+    aliases.put("indigo", "MainActivityIconIndigo");
+    aliases.put("ember", "MainActivityIconEmber");
+    aliases.put("ocean", "MainActivityIconOcean");
     aliases.put("porcelain", "MainActivityIconPorcelain");
-    aliases.put("tangerine", "MainActivityIconTangerine");
-    aliases.put("tidal", "MainActivityIconTidal");
-    aliases.put("lilac", "MainActivityIconLilac");
-    aliases.put("volt", "MainActivityIconVolt");
-    aliases.put("cobalt", "MainActivityIconCobalt");
-    aliases.put("glacier", "MainActivityIconGlacier");
+    aliases.put("graphite", "MainActivityIconGraphite");
+    aliases.put("forest", "MainActivityIconForest");
+    aliases.put("rose", "MainActivityIconRose");
     APP_ICON_ALIASES = Collections.unmodifiableMap(aliases);
   }
 

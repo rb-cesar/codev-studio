@@ -262,7 +262,7 @@ function backupRestore() {
 			);
 
 			const timestamp = formatDateForFilename(new Date());
-			const backupFilename = `Acode_backup_${timestamp}.backup`;
+			const backupFilename = `CodevStudio_backup_${timestamp}.backup`;
 			const backupDirname = "Backup";
 			const backupDir = Url.join(url, backupDirname);
 			const backupFile = Url.join(backupDir, backupFilename);

@@ -151,30 +151,6 @@ export default function mainSettings() {
 			category: categories.aboutAcode,
 			chevron: true,
 		},
-		{
-			key: "sponsors",
-			text: strings.sponsor,
-			icon: "favorite",
-			info: strings["settings-info-main-sponsors"],
-			category: categories.aboutAcode,
-			chevron: true,
-		},
-		{
-			key: "changeLog",
-			text: `${strings["changelog"]}`,
-			icon: "update",
-			info: strings["settings-info-main-changelog"],
-			category: categories.aboutAcode,
-			chevron: true,
-		},
-		{
-			key: "rateapp",
-			text: strings["rate acode"],
-			icon: "star_outline",
-			info: strings["settings-info-main-rateapp"],
-			category: categories.aboutAcode,
-			chevron: true,
-		},
 	];
 
 	if (!config.HAS_PRO) {
@@ -192,43 +168,7 @@ export default function mainSettings() {
 		});
 	}
 
-	if (!config.HAS_PRO) {
-		items.push({
-			key: "adRewards",
-			text: strings["earn ad-free time"],
-			icon: "play_arrow",
-			info: strings["settings-info-main-ad-rewards"],
-			category: categories.supportAcode,
-			chevron: true,
-		});
-		items.push({
-			key: "removeads",
-			text: strings["remove ads"],
-			icon: "block",
-			info: `${strings["settings-info-main-remove-ads"]}${!helpers.shouldAllowExternalPurchase() ? ` ${strings["iap-pro-purchase-warning"]}` : ""}`,
-			category: categories.supportAcode,
-			chevron: true,
-		});
-	}
 
-	// Add promotion items from cached data
-	const cachedPromotions = helpers.parseJSON(
-		localStorage.getItem("cached_promotions"),
-	);
-	if (Array.isArray(cachedPromotions) && cachedPromotions.length) {
-		categories.promotions = strings["settings-category-discover-apps"];
-		cachedPromotions.forEach((promo) => {
-			if (!promo.url || !promo.label || !/^https?:\/\//.test(promo.url)) return;
-			items.push({
-				key: `promo-${encodeURIComponent(promo.url)}`,
-				text: promo.label,
-				image: typeof promo.icon === "string" ? promo.icon : null,
-				info: typeof promo.link_text === "string" ? promo.link_text : "",
-				link: promo.url,
-				category: categories.promotions,
-			});
-		});
-	}
 
 	/**
 	 * Callback for settings page for handling click event

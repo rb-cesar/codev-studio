@@ -900,7 +900,14 @@
   content: "\ea0c";
 }
 .icon.acode:before {
-  content: "\ea0d";
+  content: "";
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'%3E%3Cg fill='none' stroke='%23000' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32.5 36L50.5 54L32.5 72'/%3E%3Cpath d='M57.5 72L75.5 72'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 108 108'%3E%3Cg fill='none' stroke='%23000' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M32.5 36L50.5 54L32.5 72'/%3E%3Cpath d='M57.5 72L75.5 72'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
 }
 .icon.patreon:before {
   content: "\ea0f";
