@@ -117,13 +117,6 @@ export default function otherSettings() {
 			category: categories.interface,
 		},
 		{
-			key: "showSponsorSidebarApp",
-			text: `${strings.sponsor} (${strings.sidebar})`,
-			checkbox: values.showSponsorSidebarApp,
-			info: strings["settings-info-app-sponsor-sidebar"],
-			category: categories.interface,
-		},
-		{
 			key: "openFileListPos",
 			text: strings["active files"],
 			value: values.openFileListPos,

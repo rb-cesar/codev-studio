@@ -1,6 +1,5 @@
 #!/bin/bash
 # Default values
-app="paid"
 mode="d"
 fdroidFlag=""
 packageType="apk"  # New default: apk or aar
@@ -10,9 +9,6 @@ cordovamode=""
 # Check all arguments for specific values
 for arg in "$@"; do
     case "$arg" in
-        "free"|"paid")
-            app="$arg"
-            ;;
         "p"|"prod"|"d"|"dev")
             mode="$arg"
             ;;
@@ -48,10 +44,6 @@ if [ "$fdroidFlag" = "fdroid" ]; then
   if [ -d "plugins/com.foxdebug.acode.rk.exec.proot" ]; then
     cordova plugin remove com.foxdebug.acode.rk.exec.proot
   fi
-
-  if [ -d "plugins/cordova-plugin-iap" ]; then
-    cordova plugin remove cordova-plugin-iap
-  fi
 else
   if [ -n "$tmpdir" ]; then
     echo "false" > "$tmpdir/fdroid.bool"
@@ -61,13 +53,14 @@ else
   if [ -d "src/plugins/proot" ] && [ ! -d "plugins/com.foxdebug.acode.rk.exec.proot" ]; then
     cordova plugin add src/plugins/proot/
   fi
-
-  if [ -d "src/plugins/iap" ] && [ ! -d "plugins/cordova-plugin-iap" ]; then
-    cordova plugin add src/plugins/iap/
-  fi
 fi
 
 
+
+# Billing plugin from older builds. The app is not sold through Google Play.
+if [ -d "plugins/cordova-plugin-iap" ]; then
+  cordova plugin remove cordova-plugin-iap
+fi
 
 # Normalize mode values
 if [ "$mode" = "p" ] || [ "$mode" = "prod" ]
@@ -87,7 +80,7 @@ fi
 RED=''
 NC=''
 
-script1="node ./utils/config.js $mode $app"
+script1="node ./utils/config.js $mode"
 script2="rspack --mode $webpackmode"
 # script3="node ./utils/loadStyles.js"
 

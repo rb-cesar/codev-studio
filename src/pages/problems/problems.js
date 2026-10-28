@@ -4,7 +4,6 @@ import { getLspDiagnostics } from "cm/lsp/diagnostics";
 import Page from "components/page";
 import actionStack from "lib/actionStack";
 import EditorFile from "lib/editorFile";
-import helpers from "utils/helpers";
 
 export default function Problems() {
 	const $page = Page(strings["problems"]);
@@ -51,7 +50,6 @@ export default function Problems() {
 	$content.addEventListener("click", clickHandler);
 	$page.body = $content;
 	app.append($page);
-	helpers.showAd();
 
 	$page.onhide = function () {
 		actionStack.remove("problems");

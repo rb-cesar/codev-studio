@@ -5,12 +5,17 @@ const { promisify } = require("node:util");
 
 const execFile = promisify(execFileCallback);
 
+// Plugins that older builds installed (ads, consent and Play billing). The app
+// no longer ships them, so they are removed from existing Cordova projects.
 const ADMOB_PLUGIN_ID = "admob-plus-cordova";
 const LEGACY_CONSENT_PLUGIN_ID = "cordova-plugin-consent";
-const ID_PAID = "dev.codev.studio";
-const ID_FREE = "com.foxdebug.acodefree";
-const VARIANTS = new Set(["free", "paid"]);
-const VARIANT_PLUGIN_IDS = [ADMOB_PLUGIN_ID, LEGACY_CONSENT_PLUGIN_ID];
+const IAP_PLUGIN_ID = "cordova-plugin-iap";
+const STALE_PLUGIN_IDS = [
+	LEGACY_CONSENT_PLUGIN_ID,
+	ADMOB_PLUGIN_ID,
+	IAP_PLUGIN_ID,
+];
+const APP_ID = "dev.codev.studio";
 const PACKAGE_DEPENDENCY_SECTIONS = [
 	"dependencies",
 	"devDependencies",
@@ -20,67 +25,24 @@ const PLUGIN_COMMAND_ENV = Object.freeze({
 	NPM_CONFIG_LEGACY_PEER_DEPS: "true",
 });
 
-const LOGO_TEXT = {
-	paid: `<?xml version="1.0" encoding="utf-8"?>
+const LOGO_TEXT = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#0F1424</color>
     <color name="ic_splash_background">#0F1424</color>
-</resources>`,
-	free: `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="ic_launcher_background">#0F1424</color>
-    <color name="ic_splash_background">#0F1424</color>
-</resources>`,
-};
+</resources>`;
 
 /**
- * Returns the Cordova operations required to converge the AdMob plugin state.
- * Free builds always reinstall the vendored plugin so native and web sources
- * cannot remain stale after a source change.
+ * Returns the Cordova operations required to remove plugins that older builds
+ * installed and the app no longer ships.
  *
- * @param {{
- *   variant:"free"|"paid",
- *   bundleExists:boolean,
- *   admobState?:PluginState,
- *   legacyConsentState?:PluginState
- * }} state
+ * @param {Record<string, PluginState>} states plugin state by plugin id
  */
-function getAdmobSyncPlan({
-	variant,
-	bundleExists,
-	admobState = {},
-	legacyConsentState = {},
-}) {
-	if (!VARIANTS.has(variant)) {
-		throw new Error(`Unsupported app variant: ${variant}`);
-	}
-
-	if (variant === "free" && !bundleExists) {
-		throw new Error(
-			"Missing src/plugins/admob/www/admob.js. Run `npm run build:admob` before building the free app.",
-		);
-	}
-
+function getStalePluginRemovalPlan(states = {}) {
 	const actions = [];
-	addRemoval(LEGACY_CONSENT_PLUGIN_ID, legacyConsentState);
-	addRemoval(ADMOB_PLUGIN_ID, admobState);
 
-	if (variant === "free") {
-		actions.push({
-			command: "cordova",
-			args: ["plugin", "add", "src/plugins/admob", "--nosave"],
-			env: PLUGIN_COMMAND_ENV,
-		});
-	}
-
-	return actions;
-
-	/**
-	 * @param {string} pluginId
-	 * @param {Partial<PluginState>} state
-	 */
-	function addRemoval(pluginId, state) {
-		const { installed = false, dependencyDeclared = false } = state;
+	for (const pluginId of STALE_PLUGIN_IDS) {
+		const { installed = false, dependencyDeclared = false } =
+			states[pluginId] ?? {};
 
 		if (installed) {
 			actions.push({
@@ -93,10 +55,10 @@ function getAdmobSyncPlan({
 				],
 				env: PLUGIN_COMMAND_ENV,
 			});
-			return;
+			continue;
 		}
 
-		if (!dependencyDeclared) return;
+		if (!dependencyDeclared) continue;
 
 		actions.push({
 			command: "npm",
@@ -111,6 +73,8 @@ function getAdmobSyncPlan({
 			env: PLUGIN_COMMAND_ENV,
 		});
 	}
+
+	return actions;
 }
 
 /**
@@ -167,7 +131,7 @@ function removeCordovaPluginDeclarations({ configPath, packagePath, fsImpl }) {
 	const cordovaPlugins = packageJson.cordova?.plugins;
 
 	if (cordovaPlugins && typeof cordovaPlugins === "object") {
-		for (const pluginId of VARIANT_PLUGIN_IDS) {
+		for (const pluginId of STALE_PLUGIN_IDS) {
 			if (!Object.hasOwn(cordovaPlugins, pluginId)) continue;
 			delete cordovaPlugins[pluginId];
 			packageChanged = true;
@@ -184,7 +148,7 @@ function removeCordovaPluginDeclarations({ configPath, packagePath, fsImpl }) {
 
 	const config = fsImpl.readFileSync(configPath, "utf8");
 	let nextConfig = config;
-	for (const pluginId of VARIANT_PLUGIN_IDS) {
+	for (const pluginId of STALE_PLUGIN_IDS) {
 		const pluginPattern = new RegExp(
 			`\\s*${getConfigPluginPattern(pluginId).source}[^>]*(?:\\/\\s*>|>[\\s\\S]*?<\\/plugin\\s*>)`,
 			"gi",
@@ -197,43 +161,22 @@ function removeCordovaPluginDeclarations({ configPath, packagePath, fsImpl }) {
 	}
 }
 
-function assertPluginState({ variant, paths, fsImpl }) {
+function assertPluginState({ paths, fsImpl }) {
 	const config = fsImpl.readFileSync(paths.config, "utf8");
 	const packageJson = readPackageJson(paths.package, fsImpl);
-	const admobState = getPluginState({
-		pluginId: ADMOB_PLUGIN_ID,
-		pluginPath: paths.admobPlugin,
-		packageJson,
-		config,
-		fsImpl,
-	});
-	const legacyConsentState = getPluginState({
-		pluginId: LEGACY_CONSENT_PLUGIN_ID,
-		pluginPath: paths.legacyConsentPlugin,
-		packageJson,
-		config,
-		fsImpl,
-	});
-	const expectedAdmobInstalled = variant === "free";
 
-	if (Object.values(legacyConsentState).some(Boolean)) {
-		throw new Error("Failed to remove the legacy Cordova consent plugin.");
-	}
-	if (
-		admobState.dependencyDeclared ||
-		admobState.cordovaPackageDeclared ||
-		admobState.configDeclared
-	) {
-		throw new Error(
-			"AdMob must not remain persisted in Cordova project metadata.",
-		);
-	}
-	if (admobState.installed !== expectedAdmobInstalled) {
-		throw new Error(
-			expectedAdmobInstalled
-				? "Failed to install the vendored AdMob plugin."
-				: "Failed to remove the AdMob plugin from the paid variant.",
-		);
+	for (const pluginId of STALE_PLUGIN_IDS) {
+		const state = getPluginState({
+			pluginId,
+			pluginPath: paths.plugins(pluginId),
+			packageJson,
+			config,
+			fsImpl,
+		});
+
+		if (Object.values(state).some(Boolean)) {
+			throw new Error(`Failed to remove the ${pluginId} Cordova plugin.`);
+		}
 	}
 }
 
@@ -254,7 +197,6 @@ async function runCommand(command, args, options) {
 /**
  * @param {{
  *   mode?:string,
- *   variant?:"free"|"paid",
  *   rootDir?:string,
  *   fsImpl?:typeof fs,
  *   commandRunner?:(command:string,args:string[],options:{
@@ -265,28 +207,17 @@ async function runCommand(command, args, options) {
  */
 async function configureProject({
 	mode = "d",
-	variant = "paid",
 	rootDir = path.resolve(__dirname, ".."),
 	fsImpl = fs,
 	commandRunner = runCommand,
 } = {}) {
-	if (!VARIANTS.has(variant)) {
-		throw new Error(`Unsupported app variant: ${variant}`);
-	}
-
 	const paths = {
 		babel: path.join(rootDir, ".babelrc"),
-		bundle: path.join(rootDir, "src/plugins/admob/www/admob.js"),
 		config: path.join(rootDir, "config.xml"),
 		logo: path.join(rootDir, "res/android/values/ic_launcher_background.xml"),
 		package: path.join(rootDir, "package.json"),
 		platforms: path.join(rootDir, "platforms"),
-		admobPlugin: path.join(rootDir, "plugins", ADMOB_PLUGIN_ID),
-		legacyConsentPlugin: path.join(
-			rootDir,
-			"plugins",
-			LEGACY_CONSENT_PLUGIN_ID,
-		),
+		plugins: (pluginId) => path.join(rootDir, "plugins", pluginId),
 	};
 
 	const config = fsImpl.readFileSync(paths.config, "utf8");
@@ -296,26 +227,22 @@ async function configureProject({
 		throw new Error(`Unable to read the widget id from ${paths.config}.`);
 	}
 
-	const targetId = variant === "free" ? ID_FREE : ID_PAID;
+	const targetId = APP_ID;
 	const identityChanged = currentId !== targetId;
-	const actions = getAdmobSyncPlan({
-		variant,
-		bundleExists: fsImpl.existsSync(paths.bundle),
-		admobState: getPluginState({
-			pluginId: ADMOB_PLUGIN_ID,
-			pluginPath: paths.admobPlugin,
-			packageJson,
-			config,
-			fsImpl,
-		}),
-		legacyConsentState: getPluginState({
-			pluginId: LEGACY_CONSENT_PLUGIN_ID,
-			pluginPath: paths.legacyConsentPlugin,
-			packageJson,
-			config,
-			fsImpl,
-		}),
-	});
+	const actions = getStalePluginRemovalPlan(
+		Object.fromEntries(
+			STALE_PLUGIN_IDS.map((pluginId) => [
+				pluginId,
+				getPluginState({
+					pluginId,
+					pluginPath: paths.plugins(pluginId),
+					packageJson,
+					config,
+					fsImpl,
+				}),
+			]),
+		),
+	);
 
 	const babelConfig = JSON.parse(fsImpl.readFileSync(paths.babel, "utf8"));
 	const compact = mode === "p" || mode === "prod";
@@ -336,7 +263,7 @@ async function configureProject({
 		);
 	}
 
-	fsImpl.writeFileSync(paths.logo, LOGO_TEXT[variant], "utf8");
+	fsImpl.writeFileSync(paths.logo, LOGO_TEXT, "utf8");
 
 	for (const action of actions) {
 		console.log(`|--- ${action.command} ${action.args.join(" ")} ---|`);
@@ -352,7 +279,7 @@ async function configureProject({
 		packagePath: paths.package,
 		fsImpl,
 	});
-	assertPluginState({ variant, paths, fsImpl });
+	assertPluginState({ paths, fsImpl });
 
 	const hasPlatforms =
 		fsImpl.existsSync(paths.platforms) &&
@@ -374,8 +301,7 @@ async function configureProject({
 
 async function main() {
 	const mode = process.argv[2] || "d";
-	const variant = process.argv[3] === "free" ? "free" : "paid";
-	await configureProject({ mode, variant });
+	await configureProject({ mode });
 }
 
 if (require.main === module) {
@@ -386,10 +312,8 @@ if (require.main === module) {
 }
 
 module.exports = {
-	ADMOB_PLUGIN_ID,
-	ID_FREE,
-	ID_PAID,
-	LEGACY_CONSENT_PLUGIN_ID,
+	APP_ID,
+	STALE_PLUGIN_IDS,
 	configureProject,
-	getAdmobSyncPlan,
+	getStalePluginRemovalPlan,
 };

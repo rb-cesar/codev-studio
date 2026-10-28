@@ -1,10 +1,7 @@
 import fsOperation from "fileSystem";
-import alert from "dialogs/alert";
 import confirm from "dialogs/confirm";
 import loader from "dialogs/loader";
-import purchaseListener from "handlers/purchase";
 import JSZip from "jszip";
-import helpers from "utils/helpers";
 import Url from "utils/Url";
 import { isVersionGreater } from "utils/version";
 import config from "./config";
@@ -20,13 +17,11 @@ let depsLoaders;
  * Installs a plugin.
  * @param {string} id
  * @param {string} name
- * @param {string} purchaseToken
  * @param {boolean} isDependency
  */
 export default async function installPlugin(
 	id,
 	name,
-	purchaseToken,
 	isDependency,
 ) {
 	if (!isDependency) {
@@ -54,7 +49,6 @@ export default async function installPlugin(
 			"plugin/download/",
 			`${id}?device=${device.uuid}`,
 		);
-		if (purchaseToken) pluginUrl += `&token=${purchaseToken}`;
 		pluginUrl += `&package=${BuildInfo.packageName}`;
 		pluginUrl += `&version=${device.version}`;
 
@@ -442,61 +436,15 @@ async function resolveDepsManifest(deps) {
  * @returns {Promise<boolean>} has error
  */
 async function resolveDep(manifest) {
-	let purchaseToken;
-	let product;
-	let isPaid = false;
-
-	isPaid = manifest.price > 0;
-	[product] = await helpers.promisify(iap.getProducts, [manifest.sku]);
-	if (product) {
-		const purchase = await getPurchase(product.productId);
-		purchaseToken = purchase?.purchaseToken;
-	}
-
-	if (isPaid && !purchaseToken) {
-		if (!product) throw new Error("Product not found");
-		const apiStatus = await helpers.checkAPIStatus();
-
-		if (!apiStatus) {
-			alert(strings.error, strings.api_error);
-			return true;
-		}
-
-		iap.setPurchaseUpdatedListener(...purchaseListener(onpurchase, onerror));
-		loaderDialog.setMessage(strings["loading..."]);
-		await helpers.promisify(iap.purchase, product.productId);
-
-		async function onpurchase(e) {
-			const purchase = await getPurchase(product.productId);
-			await fetch(Url.join(config.API_BASE, "plugin/order"), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					id: manifest.id,
-					token: purchase?.purchaseToken,
-					package: BuildInfo.packageName,
-				}),
-			});
-			purchaseToken = purchase?.purchaseToken;
-		}
-
-		async function onerror(error) {
-			throw error;
-		}
+	// Plugins pagos dependem de compra pela Google Play, que o app não usa.
+	if (manifest.price > 0) {
+		throw new Error(`${manifest.name}: ${strings["paid plugin skipped"]}`);
 	}
 
 	loaderDialog.setMessage(
 		`${strings.installing.replace("...", "")} ${manifest.name}...`,
 	);
-	await installPlugin(manifest.id, undefined, purchaseToken, true);
-
-	async function getPurchase(sku) {
-		const purchases = await helpers.promisify(iap.getPurchases);
-		const purchase = purchases.find((p) => p.productIds.includes(sku));
-		return purchase;
-	}
+	await installPlugin(manifest.id, undefined, true);
 }
 
 /**

@@ -536,12 +536,6 @@ async function finishSearchTask(version = searchVersion) {
 	activeSearchTasks = Math.max(0, activeSearchTasks - 1);
 	if (activeSearchTasks > 0) return;
 
-	const showAd = results.length > 100;
-	if (showAd) {
-		await helpers.showInterstitialIfReady();
-		if (version !== searchVersion) return;
-	}
-
 	if (!results.length) {
 		searchResult.setGhostText(strings["no result"], { row: 0, column: 0 });
 	}
@@ -556,8 +550,6 @@ async function finishReplaceTask(version = searchVersion) {
 	if (version !== searchVersion) return;
 	activeReplaceTasks = Math.max(0, activeReplaceTasks - 1);
 	if (activeReplaceTasks > 0) return;
-	await helpers.showInterstitialIfReady();
-	if (version !== searchVersion) return;
 	replacing = false;
 	nativeSearchId = null;
 	$indexStatus.value = "";

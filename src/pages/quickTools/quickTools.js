@@ -3,7 +3,6 @@ import Page from "components/page";
 import items, { description } from "components/quickTools/items";
 import actionStack from "lib/actionStack";
 import settings from "lib/settings";
-import helpers from "utils/helpers";
 
 let availableToolsScrollTop = 0;
 
@@ -39,7 +38,6 @@ export default function QuickTools() {
 
 	app.append($page);
 	requestAnimationFrame(() => manager.setScrollTop(availableToolsScrollTop));
-	helpers.showAd();
 }
 
 class QuickToolsManager {

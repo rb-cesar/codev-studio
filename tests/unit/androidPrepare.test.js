@@ -124,21 +124,13 @@ it("keeps every launcher alias pointing at MainActivity without a launcher indir
 	const aliases = application.findall("activity-alias");
 	expect(aliases.map((alias) => alias.get("android:name"))).toEqual([
 		".MainActivityIconDefault",
-		".MainActivityIconPro",
-		".MainActivityIconMidnightCircuit",
-		".MainActivityIconAuroraPulse",
-		".MainActivityIconTerminalGlow",
-		".MainActivityIconSolarFlare",
-		".MainActivityIconBlueprint",
-		".MainActivityIconPixelParty",
-		".MainActivityIconPrism",
+		".MainActivityIconIndigo",
+		".MainActivityIconEmber",
+		".MainActivityIconOcean",
 		".MainActivityIconPorcelain",
-		".MainActivityIconTangerine",
-		".MainActivityIconTidal",
-		".MainActivityIconLilac",
-		".MainActivityIconVolt",
-		".MainActivityIconCobalt",
-		".MainActivityIconGlacier",
+		".MainActivityIconGraphite",
+		".MainActivityIconForest",
+		".MainActivityIconRose",
 	]);
 	for (const [index, alias] of aliases.entries()) {
 		expect(alias.get("android:targetActivity")).toBe(".MainActivity");

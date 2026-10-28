@@ -1,6 +1,5 @@
 import themes from "theme/list";
 import Color from "utils/color";
-import config from "./config";
 import appSettings from "./settings";
 
 let count = 0;
@@ -17,15 +16,8 @@ export default function restoreTheme(darken = false) {
 	if (darken !== !!count) return;
 	if (darken && document.body.classList.contains("loading")) return;
 
-	let themeName = DOES_SUPPORT_THEME ? appSettings.value.appTheme : "default";
-	let theme = themes.get(themeName);
-
-	if (theme?.version !== "free" && !config.HAS_PRO) {
-		themeName = "default";
-		theme = themes.get(themeName);
-		appSettings.value.appTheme = themeName;
-		appSettings.update();
-	}
+	const themeName = DOES_SUPPORT_THEME ? appSettings.value.appTheme : "default";
+	const theme = themes.get(themeName);
 
 	if (
 		!theme.darkenedPrimaryColor ||

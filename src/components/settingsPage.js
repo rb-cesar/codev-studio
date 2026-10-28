@@ -9,7 +9,6 @@ import appSettings from "lib/settings";
 import { animate, hover, press } from "motion";
 import FileBrowser from "pages/fileBrowser";
 import { isValidColor } from "utils/color/regex";
-import helpers from "utils/helpers";
 import Checkbox from "./checkbox";
 import Page from "./page";
 import searchBar from "./searchbar";
@@ -143,7 +142,6 @@ export default function settingsPage(
 				action: $page.hide,
 			});
 			app.append($page);
-			helpers.showAd();
 
 			if (goTo) {
 				const $item = $list.get(`[data-key="${goTo}"]`);

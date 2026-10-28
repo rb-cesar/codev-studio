@@ -27,7 +27,6 @@ vi.mock("cm/editorUtils", () => ({
 vi.mock("dialogs/alert", () => ({ default: vi.fn() }));
 vi.mock("dialogs/select", () => ({ default: vi.fn() }));
 vi.mock("fileSystem", () => ({ default: vi.fn() }));
-vi.mock("lib/auth", () => ({ default: {} }));
 vi.mock("lib/config", () => ({
 	default: { DEFAULT_FILE_SESSION: "default-session" },
 }));
@@ -38,10 +37,6 @@ vi.mock("lib/openFolder", () => ({
 	addedFolder: [],
 }));
 vi.mock("lib/settings", () => ({ default: runtime.settings }));
-vi.mock("lib/startAd", () => ({
-	BANNER_SUPPRESSION_REASON: {},
-	setBannerSuppressed: vi.fn(),
-}));
 vi.mock("utils/helpers", () => ({
 	default: { error: vi.fn(), errorMessage: vi.fn() },
 }));

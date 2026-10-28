@@ -221,7 +221,6 @@ function FileBrowserInclude(mode, info, doesOpenLast = true) {
 		}
 
 		app.append($page);
-		helpers.showAd();
 
 		actionStack.push({
 			id: "filebrowser",

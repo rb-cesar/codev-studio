@@ -1,22 +1,13 @@
 import settingsPage from "components/settingsPage";
 import confirm from "dialogs/confirm";
-import rateBox from "dialogs/rateBox";
 import actionStack from "lib/actionStack";
 import { APP_ICONS } from "lib/appIcons";
-import config from "lib/config";
 import openFile from "lib/openFile";
-import { bindPrivacyChoices } from "lib/privacyChoicesController.mjs";
-import { requestProPurchase } from "lib/removeAds";
 import appSettings from "lib/settings";
 import settings from "lib/settings";
-import { showPrivacyOptions, subscribePrivacyState } from "lib/startAd";
-import openAdRewardsPage from "pages/adRewards";
 import appIconSetting, { preloadAppIconSetting } from "pages/appIconSetting";
-import Changelog from "pages/changelog/changelog";
 import plugins from "pages/plugins";
-import Sponsors from "pages/sponsors";
 import themeSetting from "pages/themeSetting";
-import helpers from "utils/helpers";
 import About from "../pages/about";
 import otherSettings from "./appSettings";
 import backupRestore from "./backupRestore";
@@ -39,7 +30,6 @@ export default function mainSettings() {
 		tools: strings["settings-category-tools"] || "Tools",
 		maintenance: strings["settings-category-maintenance"],
 		aboutAcode: strings["settings-category-about-acode"],
-		supportAcode: strings["settings-category-support-acode"],
 	};
 	const items = [
 		{
@@ -153,23 +143,6 @@ export default function mainSettings() {
 		},
 	];
 
-	if (!config.HAS_PRO) {
-		const aboutIndex = items.findIndex((item) => item.key === "about");
-		items.splice(aboutIndex, 0, {
-			key: "privacyChoices",
-			text: strings["privacy choices"] || "Privacy choices",
-			icon: "tune",
-			info:
-				strings["settings-info-main-privacy-choices"] ||
-				"Manage your advertising privacy choices.",
-			category: categories.aboutAcode,
-			chevron: true,
-			hidden: true,
-		});
-	}
-
-
-
 	/**
 	 * Callback for settings page for handling click event
 	 * @this {HTMLElement}
@@ -197,37 +170,8 @@ export default function mainSettings() {
 				About();
 				break;
 
-			case "sponsors":
-				Sponsors();
-				break;
-
-			case "rateapp":
-				rateBox();
-				break;
-
-			case "privacyChoices":
-				loader.create(
-					strings["privacy choices"] || "Privacy Choices",
-					strings["loading..."] || "Loading...",
-				);
-				try {
-					await showPrivacyOptions();
-				} catch (error) {
-					console.warn("Unable to open AdMob Privacy Choices:", error);
-					helpers.error(
-						"Unable to open Privacy Choices. Check your connection and try again.",
-					);
-				} finally {
-					loader.destroy();
-				}
-				break;
-
 			case "plugins":
 				plugins();
-				break;
-
-			case "adRewards":
-				openAdRewardsPage();
 				break;
 
 			case "formatter":
@@ -251,18 +195,6 @@ export default function mainSettings() {
 				}
 				break;
 
-			case "removeads":
-				try {
-					if (await requestProPurchase()) this.remove();
-				} catch (error) {
-					helpers.error(error);
-				}
-				break;
-
-			case "changeLog":
-				Changelog();
-				break;
-
 			default:
 				break;
 		}
@@ -281,12 +213,6 @@ export default function mainSettings() {
 	};
 	appSettings.on("update:appIcon", updateAppIcon);
 	page.onClose(() => appSettings.off("update:appIcon", updateAppIcon));
-	if (!config.HAS_PRO) {
-		bindPrivacyChoices({
-			page,
-			subscribe: subscribePrivacyState,
-		});
-	}
 	page.show();
 
 	appSettings.uiSettings["main-settings"] = page;

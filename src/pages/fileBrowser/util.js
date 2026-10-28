@@ -64,7 +64,6 @@ export default {
 					value: name ?? "",
 				},
 			],
-			"https://acode.app/faqs/224761680",
 		);
 
 		if (!res) return;

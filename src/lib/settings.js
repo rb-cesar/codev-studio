@@ -200,7 +200,6 @@ class Settings {
 			maxRetryCount: 3,
 			showRetryToast: false,
 			showSideButtons: true,
-			showSponsorSidebarApp: true,
 			showAnnotations: false,
 			lintGutter: true,
 			indentGuides: false,

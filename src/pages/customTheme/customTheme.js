@@ -9,7 +9,6 @@ import settings from "lib/settings";
 import ThemeBuilder from "theme/builder";
 import themes from "theme/list";
 import { isValidColor } from "utils/color/regex";
-import helpers from "utils/helpers";
 
 export default function CustomThemeInclude() {
 	const theme = themes.get("custom");
@@ -25,7 +24,6 @@ export default function CustomThemeInclude() {
 
 	render();
 	app.append($page);
-	helpers.showAd();
 
 	actionStack.push({
 		id: "custom-theme",

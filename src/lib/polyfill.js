@@ -1,14 +1,3 @@
-// automatically include credentials for acode.app API requests
-(function () {
-	const _fetch = window.fetch;
-	window.fetch = function (url, options) {
-		if (typeof url === "string" && url.includes("acode.app/api")) {
-			options = { ...options, credentials: "include" };
-		}
-		return _fetch.call(this, url, options);
-	};
-})();
-
 // polyfill for prepend
 
 (function (arr) {

@@ -108,7 +108,7 @@ module.exports = (env, options) => {
     },
     // Asset files
     {
-      test: /\.(png|svg|jpg|jpeg|ico|ttf|webp|eot|woff|webm|mp4|wav)(\?.*)?$/,
+      test: /\.(png|svg|jpg|jpeg|ico|ttf|webp|eot|woff2?|webm|mp4|wav)(\?.*)?$/,
       resourceQuery: { not: [/raw/, /inline/] },
       type: 'asset/resource',
     },

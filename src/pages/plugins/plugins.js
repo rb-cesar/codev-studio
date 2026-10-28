@@ -8,7 +8,6 @@ import TabView from "components/tabView";
 import tutorial from "components/tutorial";
 import prompt from "dialogs/prompt";
 import actionStack from "lib/actionStack";
-import auth from "lib/auth";
 import config from "lib/config";
 import installPlugin from "lib/installPlugin";
 import loadPlugin from "lib/loadPlugin";
@@ -18,6 +17,10 @@ import Plugin from "pages/plugin";
 import helpers from "utils/helpers";
 import Url from "utils/Url";
 import Item from "./item";
+
+// Codev Studio não está na Google Play, então plugins pagos (compra via IAP) não
+// podem ser comprados aqui. A loja mostra só os gratuitos.
+const isFree = (plugin) => !(Number.parseFloat(plugin?.price) > 0);
 
 /**
  *
@@ -217,9 +220,6 @@ export default function PluginsInclude(updates) {
 				<span id="all_plugins" onclick={renderAll} tabindex="0">
 					{strings.all}
 				</span>
-				<span id="owned_plugins" onclick={renderOwned} tabindex="0">
-					{strings.owned}
-				</span>
 			</div>
 			{$list.installed}
 		</TabView>
@@ -261,7 +261,6 @@ export default function PluginsInclude(updates) {
 	});
 
 	app.append($page);
-	helpers.showAd();
 
 	if (updates) {
 		$page.get(".options").style.display = "none";
@@ -276,7 +275,6 @@ export default function PluginsInclude(updates) {
 
 	if (navigator.onLine) {
 		getAllPlugins();
-		getOwned();
 	}
 
 	getInstalledPlugins().then(() => {
@@ -360,10 +358,6 @@ export default function PluginsInclude(updates) {
 		render("installed");
 	}
 
-	function renderOwned() {
-		render("owned");
-	}
-
 	async function searchRemotely(query) {
 		if (!query) return [];
 		try {
@@ -372,7 +366,7 @@ export default function PluginsInclude(updates) {
 			);
 			const plugins = await response.json();
 			// Map the plugins to Item elements and return
-			return plugins.map((plugin) => <Item {...plugin} />);
+			return plugins.filter(isFree).map((plugin) => <Item {...plugin} />);
 		} catch (error) {
 			$list.all.setAttribute("empty-msg", strings["error"]);
 			window.log("error", "Failed to search remotely:");
@@ -471,7 +465,7 @@ export default function PluginsInclude(updates) {
 				}
 				filterState.nextPage = page + 1;
 				const hasMoreResults = items.length === LIMIT;
-				return { items, hasMore: hasMoreResults };
+				return { items: items.filter(isFree), hasMore: hasMoreResults };
 			} catch (error) {
 				console.error("Failed to fetch ordered plugins:", error);
 				return { items: [], hasMore: false };
@@ -517,8 +511,8 @@ export default function PluginsInclude(updates) {
 					filterState.hasMoreSource = false;
 				}
 
-				const matched = data.filter((plugin) =>
-					matchesFilter(plugin, filterState),
+				const matched = data.filter(
+					(plugin) => isFree(plugin) && matchesFilter(plugin, filterState),
 				);
 				filterState.buffer.push(...matched);
 			} catch (error) {
@@ -608,11 +602,13 @@ export default function PluginsInclude(updates) {
 					`${config.API_BASE}/plugins?page=${currentPage}&limit=${LIMIT}`,
 				),
 			);
-			const newPlugins = await response.json();
+			const fetchedPlugins = await response.json();
 
-			if (newPlugins.length < LIMIT) {
+			if (fetchedPlugins.length < LIMIT) {
 				hasMore = false;
 			}
+
+			const newPlugins = fetchedPlugins.filter(isFree);
 
 			const installed = await fsOperation(PLUGIN_DIR).lsDir();
 			const disabledMap = settings.value.pluginsDisabled || {};
@@ -667,61 +663,6 @@ export default function PluginsInclude(updates) {
 			}),
 		);
 		$list.installed.setAttribute("empty-msg", strings["no plugins found"]);
-	}
-
-	async function getOwned() {
-		$list.owned.setAttribute("empty-msg", strings["loading..."]);
-
-		let iapPurchases = [];
-		if (helpers.isIapAvailable()) {
-			iapPurchases = await helpers.promisify(iap.getPurchases);
-			const disabledMap = settings.value.pluginsDisabled || {};
-
-			iapPurchases.forEach(async ({ productIds }) => {
-				const [sku] = productIds;
-				const url = Url.join(config.API_BASE, "plugin/owned", sku);
-				const plugin = await fsOperation(url).readFile("json");
-
-				plugins.owned.push(plugin);
-			});
-		} else if (!(await auth.getLoggedInUser())) {
-			console.log("Not logged in");
-			$list.owned.setAttribute("empty-msg", strings["login-to-view"]);
-			return;
-		}
-
-		try {
-			const res = await fetch(`${config.API_BASE}/plugins?owned=true`);
-			if (res.ok) {
-				const ownedPlugins = await res.json();
-				if (Array.isArray(ownedPlugins)) {
-					ownedPlugins.forEach((plugin) => {
-						if (
-							!iapPurchases.find(({ productIds }) =>
-								productIds.includes(plugin.sku),
-							)
-						) {
-							plugins.owned.push(plugin);
-						}
-					});
-				}
-			}
-		} catch (error) {}
-
-		for (const plugin of plugins.owned) {
-			plugin.installed = Boolean(
-				plugins.installed.find(({ id }) => id === plugin.id),
-			);
-
-			if (plugin.installed) {
-				plugin.enabled = disabledMap[plugin.id] !== true;
-				plugin.onToggleEnabled = onToggleEnabled;
-			}
-
-			$list.owned.append(<Item {...plugin} updates={updates} />);
-		}
-
-		$list.owned.setAttribute("empty-msg", strings["no plugins found"]);
 	}
 
 	function onInstall(plugin) {

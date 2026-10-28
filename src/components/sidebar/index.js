@@ -1,14 +1,7 @@
 import "./style.scss";
-import fsOperation from "fileSystem";
-import toast from "components/toast";
-import confirm from "dialogs/confirm";
-import loader from "dialogs/loader";
 import Ref from "html-tag-js/ref";
 import actionStack from "lib/actionStack";
-import auth, { loginEvents } from "lib/auth";
 import config from "lib/config";
-import helpers from "utils/helpers";
-import Url from "utils/Url";
 
 /**
  * @typedef {object} SideBar
@@ -41,8 +34,6 @@ function create($container, $toggler) {
 	const MIN_WIDTH = 250; //Min width of the side bar
 	const MAX_WIDTH = () => innerWidth * 0.7; //Max width of the side bar
 	const resizeBar = Ref();
-	const userAvatar = Ref();
-	const userContextMenu = Ref();
 
 	$container = $container || app;
 	let mode = innerWidth > 750 ? "tab" : "phone";
@@ -53,13 +44,6 @@ function create($container, $toggler) {
 		<div id="sidebar" className={mode}>
 			<div className="apps">
 				<div className="app-icons-container"></div>
-				<div
-					ref={userAvatar}
-					className="user-icon-container"
-					onclick={handleUserIconClick}
-				>
-					<span className="icon account_circle"></span>
-				</div>
 			</div>
 			<div className="container"></div>
 			<div
@@ -67,18 +51,6 @@ function create($container, $toggler) {
 				onmousedown={onresize}
 				ontouchstart={onresize}
 			></div>
-
-			<div ref={userContextMenu} className="user-menu">
-				<div className="user-menu-header">
-					<div className="user-menu-name"></div>
-					<div className="user-menu-email"></div>
-				</div>
-				{/* <div className="user-menu-separator"></div> */}
-				<div className="user-menu-item" onclick={handleLogout}>
-					<span className="icon logout"></span>
-					{strings.logout}
-				</div>
-			</div>
 		</div>
 	);
 	const mask = <span className="mask" onclick={hide}></span>;
@@ -103,196 +75,6 @@ function create($container, $toggler) {
 
 	if (mode === "tab" && localStorage.sidebarShown === "1") {
 		show();
-	}
-
-	loginEvents.addListener(updateSidebarAvatar);
-
-	async function handleUserIconClick(e) {
-		try {
-			loader.create(strings["login"], strings["loading..."]);
-			let user = await auth.getLoggedInUser();
-
-			if (!user) {
-				const confirmation = await confirm(
-					strings.confirm,
-					strings["confirm-login"],
-				);
-
-				if (!confirmation) {
-					return;
-				}
-
-				loader.show();
-
-				await auth.login();
-				user = await auth.getLoggedInUser();
-				if (!user) {
-					return;
-				}
-			}
-
-			const menu = userContextMenu.el;
-			const isActive = menu.classList.toggle("active");
-
-			if (isActive) {
-				const menuName = userContextMenu.el.querySelector(".user-menu-name");
-				const menuEmail = userContextMenu.el.querySelector(".user-menu-email");
-
-				if (menuName) {
-					menuName.content = (
-						<div style={{ display: "flex" }}>
-							{user.name}
-							{Boolean(user.verified) && (
-								<span className="icon verified badge"></span>
-							)}
-							{Boolean(user.acode_pro) && <span className="badge">Pro</span>}
-						</div>
-					);
-				}
-
-				if (menuEmail) {
-					menuEmail.textContent = user.email || "";
-				}
-
-				setTimeout(() => {
-					document.addEventListener("click", handleClickOutside);
-				}, 10);
-			} else {
-				document.removeEventListener("click", handleClickOutside);
-			}
-		} catch (error) {
-			console.error("Error checking login status:", error);
-		} finally {
-			loader.destroy();
-		}
-	}
-
-	function handleClickOutside(e) {
-		if (
-			!userContextMenu.el.contains(e.target) &&
-			e.target !== userAvatar.el &&
-			!userAvatar.el.contains(e.target)
-		) {
-			userContextMenu.el.classList.remove("active");
-			document.removeEventListener("click", handleClickOutside);
-		}
-	}
-
-	async function handleLogout() {
-		loader.create(strings["logout"], strings["loading..."]);
-		loader.show();
-		try {
-			const user = await auth.getLoggedInUser();
-			const success = await auth.logout();
-			if (success) {
-				userContextMenu.el.classList.remove("active");
-				document.removeEventListener("click", handleClickOutside);
-				updateSidebarAvatar();
-				toast("Logged out successfully");
-
-				try {
-					const avatarFile = await getUserAvatar(user, false);
-					if (avatarFile) {
-						await fsOperation(avatarFile).delete();
-					}
-				} catch {}
-			} else {
-				toast("Failed to logout");
-			}
-		} catch (error) {
-			console.error("Error during logout:", error);
-		} finally {
-			loader.destroy();
-		}
-	}
-
-	async function updateSidebarAvatar() {
-		const defaultAvatar = <span className="icon account_circle" />;
-		const user = await auth.getLoggedInUser();
-
-		userAvatar.content = defaultAvatar;
-
-		if (!user) {
-			return;
-		}
-
-		defaultAvatar.classList.add("avatar-loading");
-
-		const img = <img alt="User avatar" className="avatar" />;
-		const avatarFile = await getUserAvatar(user);
-
-		img.src = avatarFile
-			? await helpers.toInternalUri(avatarFile)
-			: generateInitialsAvatar(user.name);
-		img.onload = () => defaultAvatar.replaceWith(img);
-	}
-
-	async function getUserAvatar(user, download = true) {
-		let avatarUrl = user.avatar_url;
-
-		if (!avatarUrl) {
-			if (!user.github) {
-				return null;
-			}
-			avatarUrl = `https://avatars.githubusercontent.com/${user.github}`;
-		}
-
-		const hash = avatarUrl.hashCode();
-		const cacheFileName = `user_avatar_${hash}`;
-		const cacheFile = Url.join(CACHE_STORAGE, cacheFileName);
-
-		if (!(await fsOperation(cacheFile).exists())) {
-			if (!download) {
-				return null;
-			}
-
-			const blob = await helpers.promisify(
-				cordova.plugin.http.sendRequest,
-				avatarUrl,
-				{
-					responseType: "blob",
-				},
-			);
-			await fsOperation(CACHE_STORAGE).createFile(cacheFileName, blob.data);
-		}
-
-		return cacheFile;
-	}
-
-	function generateInitialsAvatar(name) {
-		const nameParts = name.split(" ");
-		const initials =
-			nameParts.length >= 2
-				? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-				: nameParts[0][0].toUpperCase();
-
-		const canvas = document.createElement("canvas");
-		canvas.width = 100;
-		canvas.height = 100;
-		const ctx = canvas.getContext("2d");
-
-		const colors = [
-			"#2196F3",
-			"#9C27B0",
-			"#E91E63",
-			"#009688",
-			"#4CAF50",
-			"#FF9800",
-		];
-		ctx.fillStyle =
-			colors[
-				name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
-					colors.length
-			];
-		ctx.fillRect(0, 0, 100, 100);
-
-		ctx.fillStyle = "#ffffff";
-		ctx.font = "bold 40px Arial";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillText(initials, 50, 50);
-
-		return canvas.toDataURL();
 	}
 
 	function onWindowResize() {
@@ -438,17 +220,6 @@ function create($container, $toggler) {
 		hideEditorNativeSelectionHandles();
 		if ($el.onshow) $el.onshow.call($el);
 		events.show.forEach((fn) => fn());
-
-		// try {
-		// 	if (await auth.isLoggedIn()) {
-		// 		const avatar = await auth.getAvatar();
-		// 		if (avatar) {
-		// 			auth.updateSidebarAvatar(avatar);
-		// 		}
-		// 	}
-		// } catch (error) {
-		// 	console.error("Error updating avatar:", error);
-		// }
 	}
 
 	function onhide() {

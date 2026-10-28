@@ -7,7 +7,6 @@ import loader from "dialogs/loader";
 import config from "lib/config";
 import appSettings from "lib/settings";
 import FileBrowser from "pages/fileBrowser";
-import helpers from "utils/helpers";
 import Uri from "utils/Uri";
 import Url from "utils/Url";
 
@@ -533,40 +532,16 @@ backupRestore.restore = async function (url) {
 						}
 
 						if (remotePlugin) {
-							let purchaseToken = null;
-							const isPaid = Number.parseFloat(remotePlugin.price) > 0;
-
-							if (isPaid) {
-								try {
-									const [product] = await helpers.promisify(iap.getProducts, [
-										remotePlugin.sku,
-									]);
-									if (product) {
-										const purchases = await helpers.promisify(iap.getPurchases);
-										const purchase = purchases.find((p) =>
-											p.productIds.includes(product.productId),
-										);
-										purchaseToken = purchase?.purchaseToken;
-									}
-
-									if (!purchaseToken) {
-										restoreResults.plugins.skipped.push({
-											id: pluginName,
-											reason: strings["paid plugin skipped"],
-										});
-										continue;
-									}
-								} catch (error) {
-									restoreResults.plugins.skipped.push({
-										id: pluginName,
-										reason: `Paid plugin - ${error.message}`,
-									});
-									continue;
-								}
+							if (Number.parseFloat(remotePlugin.price) > 0) {
+								restoreResults.plugins.skipped.push({
+									id: pluginName,
+									reason: strings["paid plugin skipped"],
+								});
+								continue;
 							}
 
 							try {
-								await installPlugin(id, remotePlugin.name, purchaseToken);
+								await installPlugin(id, remotePlugin.name);
 								restoreResults.plugins.success.push(pluginName);
 							} catch (error) {
 								restoreResults.plugins.failed.push({

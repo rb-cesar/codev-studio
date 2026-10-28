@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
 			confirmOnExit: false,
 		},
 	},
-	showInterstitialIfReady: vi.fn(),
 }));
 
 vi.mock("dialogs/confirm", () => ({
@@ -17,14 +16,6 @@ vi.mock("dialogs/confirm", () => ({
 
 vi.mock("lib/settings", () => ({
 	default: mocks.settings,
-}));
-
-// Keep this mock as a policy regression guard. If the exit flow starts importing
-// the ad helper again, the assertions below will catch the prohibited placement.
-vi.mock("utils/helpers", () => ({
-	default: {
-		showInterstitialIfReady: mocks.showInterstitialIfReady,
-	},
 }));
 
 import actionStack from "lib/actionStack";
@@ -74,24 +65,22 @@ describe("actionStack app exit", () => {
 		}
 	});
 
-	it("exits without showing an interstitial after confirmation", async () => {
+	it("exits after confirmation", async () => {
 		mocks.settings.value.confirmOnExit = true;
 		mocks.confirm.mockResolvedValue(true);
 
 		await actionStack.pop();
 
 		expect(mocks.confirm).toHaveBeenCalledWith("WARNING", "Close Acode?");
-		expect(mocks.showInterstitialIfReady).not.toHaveBeenCalled();
 		expect(mocks.exitApp).toHaveBeenCalledOnce();
 	});
 
-	it("does not show an interstitial or exit when confirmation is cancelled", async () => {
+	it("does not exit when confirmation is cancelled", async () => {
 		mocks.settings.value.confirmOnExit = true;
 		mocks.confirm.mockResolvedValue(false);
 
 		await actionStack.pop();
 
-		expect(mocks.showInterstitialIfReady).not.toHaveBeenCalled();
 		expect(mocks.exitApp).not.toHaveBeenCalled();
 	});
 
@@ -102,7 +91,6 @@ describe("actionStack app exit", () => {
 		await actionStack.pop();
 
 		expect(onClose).toHaveBeenCalledOnce();
-		expect(mocks.showInterstitialIfReady).not.toHaveBeenCalled();
 		expect(mocks.exitApp).toHaveBeenCalledOnce();
 	});
 
@@ -120,7 +108,6 @@ describe("actionStack app exit", () => {
 		await closeComplete;
 		await Promise.resolve();
 
-		expect(mocks.showInterstitialIfReady).not.toHaveBeenCalled();
 		expect(mocks.exitApp).toHaveBeenCalledOnce();
 	});
 });
