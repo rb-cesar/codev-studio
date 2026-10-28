@@ -172,6 +172,12 @@ export default `.claude-chat {
 	opacity: 0.7;
 }
 
+.claude-chat-empty-note {
+	margin-top: 10px;
+	font-size: 13px;
+	color: var(--error-text-color, #ff9b9b);
+}
+
 .claude-msg {
 	max-width: 100%;
 	display: flex;

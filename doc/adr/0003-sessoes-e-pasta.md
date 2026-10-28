@@ -16,7 +16,9 @@ O passo 1 abria uma conversa única, sempre na primeira pasta aberta na barra la
 3. **Retomar** é `claude --resume <id>` na pasta da sessão, e o histórico mostrado vem da leitura do mesmo arquivo (últimas 300 entradas, textos e entradas de ferramentas encurtados para não pesar na ponte do Cordova).
 4. **Renomear** acrescenta ao arquivo da sessão uma linha `{"type":"custom-title","customTitle":...,"sessionId":...}`, o mesmo formato que o Claude Code usa (a última linha vale).
 5. **Cada sessão tem uma pasta explícita**, mostrada no topo da aba. Uma sessão nova começa na pasta aberta que contém o arquivo em edição (a mais profunda, se houver várias), senão na primeira pasta aberta, senão na pasta pessoal; enquanto estiver vazia, o toque no topo permite trocar entre as pastas abertas e a pasta pessoal ("sessão sem projeto"). Depois da primeira mensagem a pasta não muda, porque o Claude Code guarda a sessão por pasta.
+   Pastas abertas pelo seletor de arquivos do Android são convertidas para o caminho que o Ubuntu enxerga (`primary:Dev` vira `/storage/emulated/0/Dev`, cartão SD vira `/storage/<volume>`; o Ubuntu do app já monta `/storage` e `/sdcard`). Pastas que o Ubuntu não alcança (arquivos do Termux, Downloads, nuvem) não entram na lista; a aba avisa quais são, em vez de cair em silêncio em outra pasta.
 6. **O botão "Claude" do menu, da tela de boas-vindas e da paleta abre só a aba gráfica.** O comando `claude-code`, que abria um terminal, foi removido.
+7. **Pasta inacessível é erro, não troca silenciosa.** O comando do `claude` antes fazia `cd "$pasta" || cd /public`; agora, se o `cd` falha, ele escreve o motivo e sai com código 97, e a aba mostra o erro.
 
 ## Consequências
 

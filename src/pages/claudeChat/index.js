@@ -5,6 +5,7 @@ import DOMPurify from "dompurify";
 import actionStack from "lib/actionStack";
 import ChatModel, { summarizeToolUse } from "lib/claude/chatModel";
 import ClaudeProcess, { DEFAULT_CWD } from "lib/claude/claudeProcess";
+import { sandboxPathFor } from "lib/claude/folderPath";
 import SessionStore, {
 	folderLabel,
 	formatRelativeTime,
@@ -43,27 +44,32 @@ function escapeHtml(text) {
 
 /**
  * Folders a new session can work in: the open folders (the one holding the file being
- * edited first), then the sandbox home for a session without a project.
- * @returns {Promise<Array<{ cwd: string, label: string }>>}
+ * edited first), then the sandbox home for a session without a project. `hidden` names
+ * the open folders the Ubuntu sandbox cannot see.
+ * @returns {Promise<{ choices: Array<{ cwd: string, label: string }>, hidden: string[] }>}
  */
 async function folderChoices() {
 	const choices = [];
+	const hidden = [];
 	try {
 		const { addedFolder, convertToProotPath } = await import("lib/openFolder");
-		const toPath = (url) => {
-			try {
-				const path = convertToProotPath(url);
-				return typeof path === "string" && path.startsWith("/") ? path : null;
-			} catch {
-				return null;
-			}
-		};
+		const { default: Uri } = await import("utils/Uri");
+		const toPath = (url) =>
+			sandboxPathFor(url, {
+				parseUri: (value) => Uri.parse(value),
+				toProotPath: convertToProotPath,
+				packageName: window.BuildInfo?.packageName,
+			});
 		const activeUri = globalThis.editorManager?.activeFile?.uri;
 		const activePath = activeUri ? toPath(activeUri) : null;
 
 		for (const folder of addedFolder) {
 			const cwd = toPath(folder.url);
-			if (!cwd || choices.some((choice) => choice.cwd === cwd)) continue;
+			if (!cwd) {
+				hidden.push(folder.title || folder.url);
+				continue;
+			}
+			if (choices.some((choice) => choice.cwd === cwd)) continue;
 			const base = cwd.replace(/\/$/, "");
 			choices.push({
 				cwd,
@@ -85,7 +91,7 @@ async function folderChoices() {
 	if (!choices.some((choice) => choice.cwd === DEFAULT_CWD)) {
 		choices.push({ cwd: DEFAULT_CWD, label: folderLabel(DEFAULT_CWD) });
 	}
-	return choices;
+	return { choices, hidden };
 }
 
 /**
@@ -104,6 +110,8 @@ export function createClaudeChat() {
 	let logTail = [];
 	let stickToBottom = true;
 	let renderQueued = false;
+	/** Open folders the Ubuntu sandbox cannot see, shown while the session is empty. */
+	let hiddenFolders = [];
 
 	/** message id -> { el, blocks: Array<{ el, sig, seq }> } */
 	const entries = new Map();
@@ -116,6 +124,8 @@ export function createClaudeChat() {
 		"claude-chat-empty",
 		"Converse com o Claude Code. Ele trabalha na pasta mostrada no topo.",
 	);
+	const emptyNote = el("div", "claude-chat-empty-note");
+	empty.append(emptyNote);
 	list.append(empty);
 	const status = el("div", "claude-chat-status");
 	const form = el("form", "claude-chat-composer");
@@ -260,6 +270,10 @@ export function createClaudeChat() {
 	function renderMessages() {
 		renderQueued = false;
 		empty.hidden = model.messages.length > 0;
+		emptyNote.hidden = empty.hidden || !hiddenFolders.length;
+		emptyNote.textContent = hiddenFolders.length
+			? `O Ubuntu do app não enxerga ${hiddenFolders.map((name) => `"${name}"`).join(", ")} (só armazenamento interno, cartão SD e a pasta pessoal). Abra o projeto pelo armazenamento interno ou clone-o na pasta pessoal.`
+			: "";
 
 		for (const message of model.messages) {
 			let entry = entries.get(message.id);
@@ -435,7 +449,13 @@ export function createClaudeChat() {
 		session.id = null;
 		session.title = null;
 		session.custom = null;
-		session.cwd = cwd || (await folderChoices())[0].cwd;
+		if (cwd) {
+			session.cwd = cwd;
+		} else {
+			const { choices, hidden } = await folderChoices();
+			session.cwd = choices[0].cwd;
+			hiddenFolders = hidden;
+		}
 		scheduleRender();
 		input.focus();
 	}
@@ -490,7 +510,9 @@ export function createClaudeChat() {
 	/** Lets the user pick the folder of a session that has not started yet. */
 	async function chooseFolder() {
 		if (session.id || model.messages.length || model.busy) return;
-		const choices = await folderChoices();
+		const { choices, hidden } = await folderChoices();
+		hiddenFolders = hidden;
+		scheduleRender();
 		const picked = await select(
 			"Pasta da sessão",
 			choices.map((choice) => ({
@@ -605,10 +627,11 @@ export function createClaudeChat() {
 	stopButton.addEventListener("click", stopTurn);
 
 	renderMessages();
-	folderChoices().then((choices) => {
+	folderChoices().then(({ choices, hidden }) => {
 		// Open folders may not be known yet when the tab opens; pick the default once.
 		if (!session.id && !model.messages.length) {
 			session.cwd = choices[0].cwd;
+			hiddenFolders = hidden;
 			scheduleRender();
 		}
 	});
