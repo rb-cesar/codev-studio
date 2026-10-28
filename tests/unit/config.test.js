@@ -6,14 +6,13 @@ import path from "node:path";
 import { onTestFinished, test } from "vitest";
 
 const requireFromTest = createRequire(import.meta.url);
-const {
-	ADMOB_PLUGIN_ID,
-	ID_FREE,
-	ID_PAID,
-	LEGACY_CONSENT_PLUGIN_ID,
-	configureProject,
-	getAdmobSyncPlan,
-} = requireFromTest("../../utils/config.js");
+const { APP_ID, configureProject, getStalePluginRemovalPlan } =
+	requireFromTest("../../utils/config.js");
+
+const ADMOB_PLUGIN_ID = "admob-plus-cordova";
+const LEGACY_CONSENT_PLUGIN_ID = "cordova-plugin-consent";
+const IAP_PLUGIN_ID = "cordova-plugin-iap";
+const OLD_FREE_ID = "com.foxdebug.acodefree";
 
 const TRACKED_VARIANT_FILES = [
 	"package.json",
@@ -26,10 +25,10 @@ function createFixture({
 	id,
 	admobInstalled = false,
 	legacyConsentInstalled = false,
+	iapInstalled = false,
 	dependencyPlugins = [],
 	cordovaPlugins = [],
 	configPlugins = [],
-	bundleExists = true,
 }) {
 	const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "acode-config-"));
 	const write = (relativePath, contents = "") => {
@@ -90,7 +89,7 @@ function createFixture({
 	write(".babelrc", '{"compact":false}\n');
 	write(
 		"res/android/values/ic_launcher_background.xml",
-		id === ID_FREE
+		id === OLD_FREE_ID
 			? `<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#ffffff</color>
@@ -102,11 +101,11 @@ function createFixture({
     <color name="ic_splash_background">#3a3e54</color>
 </resources>`,
 	);
-	if (bundleExists) write("src/plugins/admob/www/admob.js", "bundle");
 	if (admobInstalled) write(`plugins/${ADMOB_PLUGIN_ID}/plugin.xml`, "plugin");
 	if (legacyConsentInstalled) {
 		write(`plugins/${LEGACY_CONSENT_PLUGIN_ID}/plugin.xml`, "plugin");
 	}
+	if (iapInstalled) write(`plugins/${IAP_PLUGIN_ID}/plugin.xml`, "plugin");
 
 	function removeDependency(pluginId) {
 		const packagePath = path.join(rootDir, "package.json");
@@ -153,8 +152,6 @@ function createFixture({
 						force: true,
 					});
 					if (args.includes("--save")) removeDependency(args[2]);
-				} else if (args[1] === "add") {
-					write(`plugins/${ADMOB_PLUGIN_ID}/plugin.xml`, "plugin");
 				}
 			};
 		},
@@ -185,31 +182,28 @@ function pluginState(overrides = {}) {
 	};
 }
 
-test("plans transient AdMob removal without saving metadata", () => {
-	const actions = getAdmobSyncPlan({
-		variant: "free",
-		bundleExists: true,
-		admobState: pluginState({ installed: true }),
+test("plans transient removal without saving metadata", () => {
+	const actions = getStalePluginRemovalPlan({
+		[ADMOB_PLUGIN_ID]: pluginState({ installed: true }),
 	});
 
 	assert.deepEqual(
 		actions.map(({ command, args }) => [command, ...args]),
-		[
-			["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--nosave"],
-			["cordova", "plugin", "add", "src/plugins/admob", "--nosave"],
-		],
+		[["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--nosave"]],
 	);
 });
 
 test("plans saved removal only for installed dependency state", () => {
-	const actions = getAdmobSyncPlan({
-		variant: "paid",
-		bundleExists: true,
-		admobState: pluginState({
+	const actions = getStalePluginRemovalPlan({
+		[ADMOB_PLUGIN_ID]: pluginState({
 			installed: true,
 			dependencyDeclared: true,
 		}),
-		legacyConsentState: pluginState({
+		[LEGACY_CONSENT_PLUGIN_ID]: pluginState({
+			installed: true,
+			dependencyDeclared: true,
+		}),
+		[IAP_PLUGIN_ID]: pluginState({
 			installed: true,
 			dependencyDeclared: true,
 		}),
@@ -220,43 +214,16 @@ test("plans saved removal only for installed dependency state", () => {
 		[
 			["cordova", "plugin", "remove", LEGACY_CONSENT_PLUGIN_ID, "--save"],
 			["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--save"],
+			["cordova", "plugin", "remove", IAP_PLUGIN_ID, "--save"],
 		],
 	);
 });
 
-test("free builds reinstall transient AdMob without changing tracked metadata", async () => {
+test("removes installed ads and billing plugins and refreshes a changed identity", async () => {
 	const fixture = createFixture({
-		id: ID_FREE,
+		id: OLD_FREE_ID,
 		admobInstalled: true,
-	});
-	onTestFinished(fixture.remove);
-	const before = fixture.snapshot();
-	const commands = [];
-
-	const result = await configureProject({
-		rootDir: fixture.rootDir,
-		variant: "free",
-		commandRunner: fixture.commandRunner(commands),
-	});
-
-	assert.equal(result.identityChanged, false);
-	assert.deepEqual(commands, [
-		["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--nosave"],
-		["cordova", "plugin", "add", "src/plugins/admob", "--nosave"],
-	]);
-	assert.deepEqual(fixture.snapshot(), before);
-	assert.equal(
-		result.actions.every(
-			(action) => action.env?.NPM_CONFIG_LEGACY_PEER_DEPS === "true",
-		),
-		true,
-	);
-});
-
-test("paid builds remove transient AdMob and refresh changed identity", async () => {
-	const fixture = createFixture({
-		id: ID_FREE,
-		admobInstalled: true,
+		iapInstalled: true,
 	});
 	onTestFinished(fixture.remove);
 	fs.mkdirSync(path.join(fixture.rootDir, "platforms/android"), {
@@ -266,53 +233,56 @@ test("paid builds remove transient AdMob and refresh changed identity", async ()
 
 	const result = await configureProject({
 		rootDir: fixture.rootDir,
-		variant: "paid",
 		commandRunner: fixture.commandRunner(commands),
 	});
 
 	assert.equal(result.identityChanged, true);
-	assert.match(fixture.read("config.xml"), new RegExp(`id="${ID_PAID}"`));
+	assert.match(fixture.read("config.xml"), new RegExp(`id="${APP_ID}"`));
 	assert.deepEqual(commands, [
 		["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--nosave"],
+		["cordova", "plugin", "remove", IAP_PLUGIN_ID, "--nosave"],
 		["npm", "run", "clean"],
 	]);
+	assert.equal(
+		result.actions.every(
+			(action) => action.env?.NPM_CONFIG_LEGACY_PEER_DEPS === "true",
+		),
+		true,
+	);
 });
 
-test("free and paid builds remove installed saved legacy consent", async () => {
-	for (const variant of ["free", "paid"]) {
-		const fixture = createFixture({
-			id: variant === "free" ? ID_FREE : ID_PAID,
-			legacyConsentInstalled: true,
-			dependencyPlugins: [LEGACY_CONSENT_PLUGIN_ID],
-			cordovaPlugins: [LEGACY_CONSENT_PLUGIN_ID],
-			configPlugins: [LEGACY_CONSENT_PLUGIN_ID],
-		});
-		onTestFinished(fixture.remove);
-		const commands = [];
+test("removes installed saved legacy consent", async () => {
+	const fixture = createFixture({
+		id: APP_ID,
+		legacyConsentInstalled: true,
+		dependencyPlugins: [LEGACY_CONSENT_PLUGIN_ID],
+		cordovaPlugins: [LEGACY_CONSENT_PLUGIN_ID],
+		configPlugins: [LEGACY_CONSENT_PLUGIN_ID],
+	});
+	onTestFinished(fixture.remove);
+	const commands = [];
 
-		await configureProject({
-			rootDir: fixture.rootDir,
-			variant,
-			commandRunner: fixture.commandRunner(commands),
-		});
+	await configureProject({
+		rootDir: fixture.rootDir,
+		commandRunner: fixture.commandRunner(commands),
+	});
 
-		assert.deepEqual(commands[0], [
-			"cordova",
-			"plugin",
-			"remove",
-			LEGACY_CONSENT_PLUGIN_ID,
-			"--save",
-		]);
-		assert.doesNotMatch(
-			`${fixture.read("package.json")}${fixture.read("package-lock.json")}${fixture.read("config.xml")}`,
-			/cordova-plugin-consent/,
-		);
-	}
+	assert.deepEqual(commands[0], [
+		"cordova",
+		"plugin",
+		"remove",
+		LEGACY_CONSENT_PLUGIN_ID,
+		"--save",
+	]);
+	assert.doesNotMatch(
+		`${fixture.read("package.json")}${fixture.read("package-lock.json")}${fixture.read("config.xml")}`,
+		/cordova-plugin-consent/,
+	);
 });
 
 test("dependency-only plugin state is removed through npm", async () => {
 	const fixture = createFixture({
-		id: ID_PAID,
+		id: APP_ID,
 		dependencyPlugins: [LEGACY_CONSENT_PLUGIN_ID, ADMOB_PLUGIN_ID],
 	});
 	onTestFinished(fixture.remove);
@@ -320,7 +290,6 @@ test("dependency-only plugin state is removed through npm", async () => {
 
 	await configureProject({
 		rootDir: fixture.rootDir,
-		variant: "paid",
 		commandRunner: fixture.commandRunner(commands),
 	});
 
@@ -352,7 +321,7 @@ test("dependency-only plugin state is removed through npm", async () => {
 
 test("declaration-only state is cleaned without package commands", async () => {
 	const fixture = createFixture({
-		id: ID_PAID,
+		id: APP_ID,
 		cordovaPlugins: [LEGACY_CONSENT_PLUGIN_ID, ADMOB_PLUGIN_ID],
 		configPlugins: [LEGACY_CONSENT_PLUGIN_ID, ADMOB_PLUGIN_ID],
 	});
@@ -362,7 +331,6 @@ test("declaration-only state is cleaned without package commands", async () => {
 
 	await configureProject({
 		rootDir: fixture.rootDir,
-		variant: "paid",
 		commandRunner: fixture.commandRunner(commands),
 	});
 
@@ -374,13 +342,12 @@ test("declaration-only state is cleaned without package commands", async () => {
 	assert.equal(fixture.read("package-lock.json"), packageLockBefore);
 });
 
-test("repeated free configuration converges to identical tracked files", async () => {
-	const fixture = createFixture({ id: ID_FREE });
+test("repeated configuration converges to identical tracked files", async () => {
+	const fixture = createFixture({ id: OLD_FREE_ID });
 	onTestFinished(fixture.remove);
 
 	await configureProject({
 		rootDir: fixture.rootDir,
-		variant: "free",
 		commandRunner: fixture.commandRunner([]),
 	});
 	const converged = fixture.snapshot();
@@ -388,24 +355,16 @@ test("repeated free configuration converges to identical tracked files", async (
 
 	await configureProject({
 		rootDir: fixture.rootDir,
-		variant: "free",
 		commandRunner: fixture.commandRunner(secondCommands),
 	});
 
 	assert.deepEqual(fixture.snapshot(), converged);
-	assert.deepEqual(secondCommands, [
-		["cordova", "plugin", "remove", ADMOB_PLUGIN_ID, "--nosave"],
-		["cordova", "plugin", "add", "src/plugins/admob", "--nosave"],
-	]);
-	assert.equal(
-		fs.existsSync(path.join(fixture.rootDir, "plugins", ADMOB_PLUGIN_ID)),
-		true,
-	);
+	assert.deepEqual(secondCommands, []);
 });
 
 test("fails when a successful command leaves dependency state behind", async () => {
 	const fixture = createFixture({
-		id: ID_PAID,
+		id: APP_ID,
 		dependencyPlugins: [ADMOB_PLUGIN_ID],
 	});
 	onTestFinished(fixture.remove);
@@ -413,20 +372,8 @@ test("fails when a successful command leaves dependency state behind", async () 
 	await assert.rejects(
 		configureProject({
 			rootDir: fixture.rootDir,
-			variant: "paid",
 			commandRunner: async () => {},
 		}),
-		/AdMob must not remain persisted/,
-	);
-});
-
-test("free builds fail clearly when the committed runtime bundle is missing", () => {
-	assert.throws(
-		() =>
-			getAdmobSyncPlan({
-				variant: "free",
-				bundleExists: false,
-			}),
-		/Run `npm run build:admob`/,
+		/Failed to remove the admob-plus-cordova Cordova plugin/,
 	);
 });

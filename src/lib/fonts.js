@@ -2,9 +2,22 @@ import fsOperation from "fileSystem";
 import loader from "dialogs/loader";
 import helpers from "utils/helpers";
 import Url from "utils/Url";
+import cascadiaCodeLatin from "../res/fonts/CascadiaCode-Latin.woff2";
+import cascadiaCodeLatinExt from "../res/fonts/CascadiaCode-LatinExt.woff2";
 import firaCode from "../res/fonts/FiraCode.ttf";
+import jetBrainsMonoBoldLatin from "../res/fonts/JetBrainsMonoBold-Latin.woff2";
+import jetBrainsMonoBoldLatinExt from "../res/fonts/JetBrainsMonoBold-LatinExt.woff2";
+import jetBrainsMonoRegularLatin from "../res/fonts/JetBrainsMonoRegular-Latin.woff2";
+import jetBrainsMonoRegularLatinExt from "../res/fonts/JetBrainsMonoRegular-LatinExt.woff2";
 import MesloLGSNFRegular from "../res/fonts/MesloLGSNFRegular.ttf";
+import notoMonoLatin from "../res/fonts/NotoMono-Latin.woff2";
 import robotoMono from "../res/fonts/RobotoMono.ttf";
+import sourceCodeProLatin from "../res/fonts/SourceCodePro-Latin.woff2";
+import sourceCodeProLatinExt from "../res/fonts/SourceCodePro-LatinExt.woff2";
+import victorMonoItalicLatin from "../res/fonts/VictorMonoItalic-Latin.woff2";
+import victorMonoItalicLatinExt from "../res/fonts/VictorMonoItalic-LatinExt.woff2";
+import victorMonoMediumLatin from "../res/fonts/VictorMonoMedium-Latin.woff2";
+import victorMonoMediumLatinExt from "../res/fonts/VictorMonoMedium-LatinExt.woff2";
 
 const fonts = new Map();
 const customFontNames = new Set();
@@ -14,6 +27,11 @@ const EDITOR_STYLE_ID = "editor-font-style";
 const APP_STYLE_ID = "app-font-style";
 const DEFAULT_EDITOR_FONT = "Roboto Mono";
 const DEFAULT_APP_FONT_STACK = `"Roboto", sans-serif`;
+// Subset ranges of the bundled .woff2 files (see src/res/fonts/OFL.txt).
+const LATIN_RANGE =
+	"U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD";
+const LATIN_EXT_RANGE =
+	"U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF";
 
 add(
 	"Fira Code",
@@ -52,9 +70,17 @@ add(
 	"Source Code",
 	`@font-face {
   font-family: 'Source Code';
-  src: url(https://acode.app/SourceCodePro.ttf) format('truetype');
+  src: url(${sourceCodeProLatin}) format('woff2');
   font-weight: 300 700;
   font-style: normal;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'Source Code';
+  src: url(${sourceCodeProLatinExt}) format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
@@ -62,8 +88,15 @@ add(
 	"Victor Mono Italic",
 	`@font-face {
   font-family: 'Victor Mono Italic';
-  src: url(https://acode.app/VictorMono-Italic.otf) format('truetype');
+  src: url(${victorMonoItalicLatin}) format('woff2');
   font-style: normal;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'Victor Mono Italic';
+  src: url(${victorMonoItalicLatinExt}) format('woff2');
+  font-style: normal;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
@@ -71,9 +104,17 @@ add(
 	"Victor Mono Medium",
 	`@font-face {
   font-family: 'Victor Mono Medium';
-  src: url(https://acode.app/VictorMono-Medium.otf) format('truetype');
+  src: url(${victorMonoMediumLatin}) format('woff2');
   font-weight: medium;
   font-style: normal;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'Victor Mono Medium';
+  src: url(${victorMonoMediumLatinExt}) format('woff2');
+  font-weight: medium;
+  font-style: normal;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
@@ -81,12 +122,21 @@ add(
 	"Cascadia Code",
 	`@font-face {
   font-family: 'Cascadia Code';
-  src: url(https://acode.app/CascadiaCode.ttf) format('truetype');
+  src: url(${cascadiaCodeLatin}) format('woff2');
   font-weight: 300 700;
   font-style: normal;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'Cascadia Code';
+  src: url(${cascadiaCodeLatinExt}) format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
+// Not available as a package, so it is still downloaded from the old host.
 add(
 	"Proggy Clean",
 	`@font-face {
@@ -101,8 +151,15 @@ add(
 	"JetBrains Mono Bold",
 	`@font-face {
   font-family: 'JetBrains Mono Bold';
-  src: url(https://acode.app/JetBrainsMono-Bold.ttf) format('truetype');
+  src: url(${jetBrainsMonoBoldLatin}) format('woff2');
   font-weight: bold;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'JetBrains Mono Bold';
+  src: url(${jetBrainsMonoBoldLatinExt}) format('woff2');
+  font-weight: bold;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
@@ -110,9 +167,17 @@ add(
 	"JetBrains Mono Regular",
 	`@font-face {
   font-family: 'JetBrains Mono Regular';
-  src: url(https://acode.app/JetBrainsMono-Regular.ttf) format('truetype');
+  src: url(${jetBrainsMonoRegularLatin}) format('woff2');
   font-weight: 300 700;
   font-style: normal;
+  unicode-range: ${LATIN_RANGE};
+}
+@font-face {
+  font-family: 'JetBrains Mono Regular';
+  src: url(${jetBrainsMonoRegularLatinExt}) format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  unicode-range: ${LATIN_EXT_RANGE};
 }`,
 );
 
@@ -121,10 +186,10 @@ add(
 	`@font-face {
   font-display: swap;
   font-family: 'Noto Mono';
-  src: url(https://acode.app/NotoMono-Regular.woff) format("woff");
+  src: url(${notoMonoLatin}) format('woff2');
   font-weight: 400;
   font-style: normal;
-  unicode-range: U+0590-06FF;
+  unicode-range: ${LATIN_RANGE};
 }`,
 );
 

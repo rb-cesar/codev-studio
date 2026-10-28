@@ -13,29 +13,18 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	settings: { value: { appIcon: "default" }, update: vi.fn() },
-	config: { HAS_PRO: false },
-	reward: vi.fn(),
-	purchase: vi.fn(),
-	external: false,
 	toast: vi.fn(),
 	error: vi.fn(),
 }));
 vi.mock("lib/settings", () => ({ default: mocks.settings }));
-vi.mock("lib/config", () => ({ default: mocks.config }));
 vi.mock("lib/restoreTheme", () => ({ default: vi.fn() }));
 vi.mock("components/checkbox", () => ({
 	default: () => document.createElement("input"),
 }));
 vi.mock("components/toast", () => ({ default: mocks.toast }));
-vi.mock("lib/adRewards", () => ({
-	default: { canShowAds: () => !mocks.config.HAS_PRO },
-}));
-vi.mock("lib/rewardedAd", () => ({ default: mocks.reward }));
-vi.mock("lib/removeAds", () => ({ requestProPurchase: mocks.purchase }));
 vi.mock("utils/helpers", () => ({
 	default: {
 		error: mocks.error,
-		shouldAllowExternalPurchase: () => mocks.external,
 		promisify: (fn, ...args) =>
 			new Promise((resolve, reject) => fn(...args, resolve, reject)),
 	},
@@ -125,21 +114,15 @@ beforeEach(() => {
 			"The app will exit after the app icon is changed.",
 		"loading...": "Loading...",
 		"app icon changed": "Changed",
-		"confirm app icon reward": "Watch?",
-		"rewarded ad incomplete": "Incomplete",
 		close: "Close",
 		ok: "OK",
 		cancel: "Cancel",
 	});
 	vi.stubGlobal("system", { setAppIcon: vi.fn((id, success) => success()) });
-	mocks.config.HAS_PRO = false;
-	mocks.external = false;
 	mocks.settings.value.appIcon = "default";
 	mocks.settings.update.mockImplementation(async ({ appIcon }) => {
 		mocks.settings.value.appIcon = appIcon;
 	});
-	mocks.reward.mockResolvedValue(true);
-	mocks.purchase.mockResolvedValue(false);
 });
 afterEach(() => {
 	actionStack.clearFromMark();
@@ -256,7 +239,7 @@ function dialogHarness() {
 		loader,
 		trigger,
 		close: dialog.querySelector(".button-container button"),
-		click(id = "pixel_party") {
+		click(id = "ember") {
 			app.querySelector(`.app-icon-dialog [data-icon="${id}"] img`).click();
 			return select.mock.results.at(-1)?.value;
 		},
@@ -273,7 +256,6 @@ it("opens one complete grid and closes only after native success, preserving the
 		}
 		for (const node of nodes) app.appendChild(node);
 	});
-	mocks.config.HAS_PRO = true;
 	const h = dialogHarness();
 	expect(h.open()).toBe(h.closed);
 	expect(actionStack.length).toBe(1);
@@ -315,7 +297,7 @@ it("opens one complete grid and closes only after native success, preserving the
 	expect(actionStack.length).toBe(1);
 	applied();
 	await pending;
-	expect(mocks.settings.value.appIcon).toBe("pixel_party");
+	expect(mocks.settings.value.appIcon).toBe("ember");
 	expect(mocks.toast).toHaveBeenCalledExactlyOnceWith("Changed");
 	vi.runAllTimers();
 	await h.closed;
@@ -329,7 +311,6 @@ it.each([
 	"success",
 	"failure",
 ])("keeps a reopened picker's loader active across old cleanup until %s", async (outcome) => {
-	mocks.config.HAS_PRO = true;
 	const h = dialogHarness();
 	const first = h.click();
 	confirmSelection();
@@ -345,7 +326,7 @@ it.each([
 	system.setAppIcon.mockImplementationOnce((id, success, failure) => {
 		finish = () => (outcome === "success" ? success() : failure("Failed"));
 	});
-	const pending = h.click("solar_flare");
+	const pending = h.click("ocean");
 	confirmSelection();
 	await vi.waitFor(() => expect(finish).toBeTypeOf("function"));
 	try {
@@ -428,20 +409,14 @@ it("replaces loader content and cancellation without breaking hide and show", as
 	expect(restoreTheme.mock.calls).toEqual([[true], [true], [], []]);
 });
 
-it("locks tiles before confirmation and shows the loader through reward and application", async () => {
-	let reward, applied;
+it("locks tiles before confirmation and shows the loader through application", async () => {
+	let applied;
 	const h = dialogHarness();
-	mocks.reward.mockImplementation(() => {
-		expect(h.loader.create).toHaveBeenCalledOnce();
-		return new Promise((resolve) => {
-			reward = resolve;
-		});
-	});
 	system.setAppIcon.mockImplementation((id, success) => {
 		applied = success;
 	});
 	const pending = h.click();
-	h.click("solar_flare");
+	h.click("ocean");
 	expect(actionStack.length).toBe(2);
 	expect(
 		h.dialog.querySelector(".app-icon-list").getAttribute("aria-busy"),
@@ -453,19 +428,13 @@ it("locks tiles before confirmation and shows the loader through reward and appl
 	).toBe(true);
 	expect(h.loader.create).not.toHaveBeenCalled();
 	expect(h.loader.destroy).not.toHaveBeenCalled();
-	expect(mocks.reward).not.toHaveBeenCalled();
-	// The exit warning comes first, then the rewarded-ad prompt.
+	// The exit warning is confirmed before the loader is shown.
 	confirmSelection();
-	await vi.waitFor(() => expect(pendingConfirm()).toBeTruthy());
-	confirmSelection();
-	await vi.waitFor(() => expect(reward).toBeTypeOf("function"));
-	h.click("solar_flare");
-	expect(mocks.reward).toHaveBeenCalledOnce();
-	reward(true);
 	await vi.waitFor(() => expect(applied).toBeTypeOf("function"));
+	h.click("ocean");
 	expect(h.loader.create).toHaveBeenCalledOnce();
 	expect(h.loader.destroy).not.toHaveBeenCalled();
-	expect(system.setAppIcon.mock.calls[0][0]).toBe("pixel_party");
+	expect(system.setAppIcon.mock.calls[0][0]).toBe("ember");
 	applied();
 	await pending;
 	vi.runAllTimers();
@@ -482,7 +451,6 @@ it("never shows a loader when the picker closes during confirmation", async () =
 	await h.closed;
 	expect(h.loader.create).not.toHaveBeenCalled();
 	expect(h.loader.destroy).not.toHaveBeenCalled();
-	expect(mocks.reward).not.toHaveBeenCalled();
 	expect(system.setAppIcon).not.toHaveBeenCalled();
 	expect(actionStack.length).toBe(0);
 });
@@ -524,17 +492,13 @@ it.each([
 it.each([
 	"back",
 	"cancel",
-	"reward failure",
 	"native failure",
-	"purchase",
 ])("keeps the picker and images usable after %s", async (outcome) => {
-	if (outcome === "reward failure")
-		mocks.reward.mockRejectedValueOnce(new Error("Unavailable"));
 	if (outcome === "native failure")
 		system.setAppIcon.mockImplementationOnce((id, ok, fail) => fail("Failed"));
 	const h = dialogHarness();
 	const images = [...h.dialog.querySelectorAll("img")];
-	const pending = h.click(outcome === "purchase" ? "pro" : "pixel_party");
+	const pending = h.click();
 	// Every selection first confirms the exit warning.
 	expect(actionStack.length).toBe(2);
 	expect(h.loader.create).not.toHaveBeenCalled();
@@ -542,11 +506,6 @@ it.each([
 		await actionStack.pop();
 	} else {
 		confirmSelection(outcome !== "cancel");
-		if (outcome === "reward failure" || outcome === "native failure") {
-			// Rewarded-ad icons ask for the ad after the exit warning.
-			await vi.waitFor(() => expect(pendingConfirm()).toBeTruthy());
-			confirmSelection();
-		}
 	}
 	await pending;
 	vi.runAllTimers();
@@ -563,74 +522,12 @@ it.each([
 	expect(mocks.settings.value.appIcon).toBe("default");
 	for (const [i, image] of [...h.dialog.querySelectorAll("img")].entries())
 		expect(image).toBe(images[i]);
-	mocks.config.HAS_PRO = true;
 	const applied = h.click();
 	confirmSelection();
 	await applied;
 	vi.runAllTimers();
 	await h.closed;
-	expect(mocks.settings.value.appIcon).toBe("pixel_party");
-});
-
-it("leaves the external Pro flow's loader under its own control", async () => {
-	mocks.external = true;
-	const h = dialogHarness();
-	mocks.purchase.mockImplementation(async () => {
-		h.loader.create("Login", "Loading...");
-	});
-	const pending = h.click("pro");
-	confirmSelection();
-	await pending;
-	expect(h.loader.create).toHaveBeenCalledExactlyOnceWith(
-		"Login",
-		"Loading...",
-	);
-	expect(h.loader.destroy).not.toHaveBeenCalled();
-	expect(h.dialog.inert).toBe(false);
-	expect(document.querySelector("#__loader .title").textContent.trim()).toBe(
-		"Login",
-	);
-	h.loader.destroy();
-	vi.runAllTimers();
-	await actionStack.pop();
-	vi.runAllTimers();
-	await h.closed;
-	expect(h.loader.destroy).toHaveBeenCalledOnce();
-});
-
-it("cleans up a pending reward and ignores late callbacks after reopening", async () => {
-	let reward;
-	mocks.reward.mockImplementation(
-		() =>
-			new Promise((resolve) => {
-				reward = resolve;
-			}),
-	);
-	const h = dialogHarness();
-	const pending = h.click();
-	confirmSelection();
-	await vi.waitFor(() => expect(pendingConfirm()).toBeTruthy());
-	confirmSelection();
-	await vi.waitFor(() => expect(reward).toBeTypeOf("function"));
-	expect(h.loader.create).toHaveBeenCalledOnce();
-	h.selection.onChange();
-	vi.runAllTimers();
-	await h.closed;
-	expect(h.loader.destroy).toHaveBeenCalledOnce();
-	const next = h.open();
-	reward(true);
-	await pending;
-	h.selection.onChange();
-	expect(h.loader.create).toHaveBeenCalledOnce();
-	expect(h.loader.destroy).toHaveBeenCalledOnce();
-	expect(system.setAppIcon).not.toHaveBeenCalled();
-	expect(actionStack.length).toBe(1);
-	expect(app.querySelector(".app-icon-dialog").classList.contains("hide")).toBe(
-		false,
-	);
-	await actionStack.pop();
-	vi.runAllTimers();
-	await next;
+	expect(mocks.settings.value.appIcon).toBe("ember");
 });
 
 it("wraps keyboard focus but lets Escape dismiss the top confirmation first", async () => {

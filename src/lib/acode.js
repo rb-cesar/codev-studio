@@ -603,8 +603,6 @@ class Acode {
 							return;
 						}
 
-						let purchaseToken;
-						let product;
 						const pluginUrl = Url.join(config.API_BASE, `plugin/${pluginId}`);
 						fsOperation(pluginUrl)
 							.readFile("json")
@@ -613,86 +611,22 @@ class Acode {
 								return null;
 							})
 							.then((remotePlugin) => {
-								if (remotePlugin) {
-									const isPaid = remotePlugin.price > 0;
-									helpers
-										.promisify(iap.getProducts, [remotePlugin.sku])
-										.then((products) => {
-											[product] = products;
-											if (product) {
-												return getPurchase(product.productId);
-											}
-											return null;
-										})
-										.then((purchase) => {
-											purchaseToken = purchase?.purchaseToken;
+								if (!remotePlugin) return;
 
-											if (isPaid && !purchaseToken) {
-												if (!product) throw new Error("Product not found");
-												return helpers
-													.checkAPIStatus()
-													.then(async (apiStatus) => {
-														if (!apiStatus) {
-															alert(strings.error, strings.api_error);
-															return;
-														}
-
-														const { default: purchaseListener } = await import(
-															/* webpackChunkName: "purchaseHandler" */ "handlers/purchase"
-														);
-														iap.setPurchaseUpdatedListener(
-															...purchaseListener(onpurchase, onerror),
-														);
-														return helpers.promisify(
-															iap.purchase,
-															product.productId,
-														);
-													});
-											}
-										})
-										.then(() => {
-											import("lib/installPlugin").then(
-												({ default: installPlugin }) => {
-													installPlugin(
-														pluginId,
-														remotePlugin.name,
-														purchaseToken,
-													).then(() => {
-														resolve();
-													});
-												},
-											);
-										});
-
-									async function onpurchase(e) {
-										const purchase = await getPurchase(product.productId);
-										await fetch(Url.join(config.API_BASE, "plugin/order"), {
-											method: "POST",
-											headers: {
-												"Content-Type": "application/json",
-											},
-											body: JSON.stringify({
-												id: remotePlugin.id,
-												token: purchase?.purchaseToken,
-												package: BuildInfo.packageName,
-											}),
-										});
-										purchaseToken = purchase?.purchaseToken;
-									}
-
-									async function onerror(error) {
-										throw error;
-									}
+								// Plugins pagos dependem de compra pela Google Play.
+								if (remotePlugin.price > 0) {
+									reject(new Error(strings["paid plugin skipped"]));
+									return;
 								}
-							});
 
-						async function getPurchase(sku) {
-							const purchases = await helpers.promisify(iap.getPurchases);
-							const purchase = purchases.find((p) =>
-								p.productIds.includes(sku),
-							);
-							return purchase;
-						}
+								return import("lib/installPlugin").then(
+									({ default: installPlugin }) =>
+										installPlugin(pluginId, remotePlugin.name).then(() => {
+											resolve();
+										}),
+								);
+							})
+							.catch(reject);
 					});
 				})
 				.catch((error) => {

@@ -1,6 +1,5 @@
 import "./style.scss";
 import palette from "components/palette";
-import config from "lib/config";
 import appSettings from "lib/settings";
 import themes, { updateSystemThemeWatcher } from "theme/list";
 import changeEditorTheme from "../changeEditorTheme";
@@ -19,9 +18,7 @@ function generateHints(type) {
 
 	// App themes
 	const currentTheme = appSettings.value.appTheme;
-	const availableThemes = themes
-		.list()
-		.filter((theme) => !(theme.version === "paid" && !config.HAS_PRO));
+	const availableThemes = themes.list();
 
 	return availableThemes.map((theme) => {
 		const isCurrent = theme.id === currentTheme;

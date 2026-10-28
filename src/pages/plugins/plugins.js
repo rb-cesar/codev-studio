@@ -261,7 +261,6 @@ export default function PluginsInclude(updates) {
 	});
 
 	app.append($page);
-	helpers.showAd();
 
 	if (updates) {
 		$page.get(".options").style.display = "none";

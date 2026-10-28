@@ -225,19 +225,3 @@
     }
   }
 }
-
-// Discord icon
-.icon.discord {
-  position: relative;
-
-  &::before {
-    content: "";
-    display: block;
-    width: 16px;
-    height: 16px;
-    background-image: url(../../pages/about/discord.svg);
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-}

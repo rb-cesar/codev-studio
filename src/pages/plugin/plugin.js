@@ -3,16 +3,11 @@ import fsOperation from "fileSystem";
 import Page from "components/page";
 import alert from "dialogs/alert";
 import loader from "dialogs/loader";
-import { addIntentHandler, removeIntentHandler } from "handlers/intent";
-import purchaseListener from "handlers/purchase";
 import actionStack from "lib/actionStack";
-import auth, { loginEvents } from "lib/auth";
 import config from "lib/config";
-import customTab from "lib/customTab";
 import installPlugin from "lib/installPlugin";
 import InstallState from "lib/installState";
 import settings from "lib/settings";
-import { interstitialAd } from "lib/startAd";
 import markdownIt from "markdown-it";
 import anchor from "markdown-it-anchor";
 import markdownItFootnote from "markdown-it-footnote";
@@ -48,19 +43,13 @@ export default async function PluginInclude(
 	let installed = await fsOperation(PLUGIN_DIR, id).exists();
 	let plugin = {};
 	let currentVersion = "";
-	let purchased = false;
 	let cancelled = false;
 	let update = false;
 	let isPaid = false;
-	let price;
-	let product;
-	let purchaseToken;
 	let $settingsIcon;
 	let minVersionCode = -1;
 	let isSupported = true;
 	let unsupportedEditor;
-	let refundHandlerSet = false;
-	let purchaseHandlerSet = false;
 
 	actionStack.push({
 		id: "plugin",
@@ -81,7 +70,6 @@ export default async function PluginInclude(
 
 	$lastPluginPage = $page;
 	app.append($page);
-	helpers.showAd();
 
 	try {
 		if (installed) {
@@ -179,31 +167,7 @@ export default async function PluginInclude(
 					unsupportedEditor = remotePlugin.supported_editor;
 					isSupported = isPluginEditorSupported(unsupportedEditor);
 
-					if (!Number.parseFloat(remotePlugin.price)) return;
-
-					isPaid = remotePlugin.price > 0;
-					purchased = remotePlugin.owned;
-					price = `${remotePlugin.currencySymbol ?? ""}${remotePlugin.price}`;
-
-					if (
-						helpers.isIapAvailable() &&
-						!purchased &&
-						(await helpers.checkAPIStatus())
-					) {
-						try {
-							[product] = await helpers.promisify(iap.getProducts, [
-								remotePlugin.sku,
-							]);
-							if (product) {
-								const purchase = await getPurchase(product.productId);
-								purchased = !!purchase;
-								price = product.price;
-								purchaseToken = purchase?.purchaseToken;
-							}
-						} catch (error) {
-							helpers.error(error);
-						}
-					}
+					isPaid = Number.parseFloat(remotePlugin.price) > 0;
 				}
 			} catch (error) {
 				console.error(error);
@@ -216,7 +180,7 @@ export default async function PluginInclude(
 		render();
 
 		if (installOnRender && !installed) {
-			const $button = $page.get('[data-type="install"], [data-type="buy"]');
+			const $button = $page.get('[data-type="install"]');
 			$button?.click();
 		}
 	} catch (err) {
@@ -228,16 +192,10 @@ export default async function PluginInclude(
 
 	async function install() {
 		try {
-			await Promise.all([
-				loadAd(this),
-				installPlugin(plugin.source || id, plugin.name, purchaseToken),
-			]);
+			await installPlugin(plugin.source || id, plugin.name);
 			if (onInstall) onInstall(plugin);
 			installed = true;
 			update = false;
-			if (!plugin.price) {
-				await helpers.showInterstitialIfReady();
-			}
 			render();
 		} catch (err) {
 			window.log("error", err);
@@ -250,7 +208,6 @@ export default async function PluginInclude(
 			const pluginDir = Url.join(PLUGIN_DIR, plugin.id);
 			const state = await InstallState.new(plugin.id);
 			await Promise.all([
-				loadAd(this),
 				fsOperation(pluginDir).delete(),
 				state.delete(state.storeUrl),
 			]);
@@ -258,166 +215,10 @@ export default async function PluginInclude(
 			if (onUninstall) onUninstall(plugin.id);
 			installed = false;
 			update = false;
-			if (!plugin.price) {
-				await helpers.showInterstitialIfReady();
-			}
 			render();
 		} catch (err) {
 			window.log("error", err);
 			helpers.error(err);
-		}
-	}
-
-	async function buy(e) {
-		const $button = e.target;
-		const oldText = $button.textContent;
-
-		try {
-			if (helpers.shouldAllowExternalPurchase()) {
-				await customTab(`${config.BASE_URL}/plugin/${id}?callback=app`);
-				if (!purchaseHandlerSet) {
-					purchaseHandlerSet = true;
-					const handler = async ({ module, action, value }) => {
-						if (module === "plugin" && action === "purchased" && value === id) {
-							loader.show();
-
-							try {
-								const pluginData = await fsOperation(
-									config.API_BASE,
-									`plugin/${id}`,
-								).readFile("json");
-
-								purchased = pluginData.owned;
-								render();
-							} catch (error) {
-								window.log(error);
-								helpers.error(error);
-							}
-
-							loader.hide();
-							purchaseHandlerSet = false;
-							removeIntentHandler(handler);
-						}
-					};
-					addIntentHandler(handler);
-					cleanups.push(() => removeIntentHandler(handler));
-				}
-				return;
-			}
-		} catch (error) {}
-
-		try {
-			if (!product) throw new Error("Product not found");
-			const apiStatus = await helpers.checkAPIStatus();
-
-			if (!apiStatus) {
-				alert(strings.error, strings.api_error);
-				return;
-			}
-
-			iap.setPurchaseUpdatedListener(...purchaseListener(onpurchase, onerror));
-			$button.textContent = strings["loading..."];
-			await helpers.promisify(iap.purchase, product.productId);
-
-			async function onpurchase(e) {
-				const purchase = await getPurchase(product.productId);
-				await fetch(Url.join(config.API_BASE, "plugin/order"), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						id: plugin.id,
-						token: purchase?.purchaseToken,
-						package: BuildInfo.packageName,
-					}),
-				});
-				purchaseToken = purchase?.purchaseToken;
-				purchased = !!purchase;
-				$button.textContent = oldText;
-				install();
-			}
-
-			async function onerror(error) {
-				helpers.error(error);
-				$button.textContent = oldText;
-			}
-		} catch (error) {
-			window.log("error", "Failed to buy:");
-			window.log("error", error);
-			helpers.error(error);
-			$button.textContent = oldText;
-		}
-	}
-
-	async function refund(e) {
-		const $button = e.target;
-		const oldText = $button.textContent;
-
-		if (helpers.shouldAllowExternalPurchase()) {
-			await customTab(`${config.BASE_URL}/plugin/${id}?callback=app`);
-
-			if (!refundHandlerSet) {
-				refundHandlerSet = true;
-				const handler = ({ module, action, value }) => {
-					if (module === "plugin" && action === "uninstall" && value === id) {
-						purchased = false;
-
-						if (installed) {
-							uninstall();
-						} else {
-							render();
-						}
-
-						refundHandlerSet = false;
-						removeIntentHandler(handler);
-					}
-				};
-
-				addIntentHandler(handler);
-				cleanups.push(() => removeIntentHandler(handler));
-			}
-			return;
-		}
-
-		try {
-			if (!product) throw new Error("Product not found");
-			$button.textContent = strings["loading..."];
-			const res = await fetch(Url.join(config.API_BASE, "plugin/refund"), {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					id: plugin.id,
-					package: BuildInfo.packageName,
-					token: purchaseToken,
-				}),
-			});
-
-			if (!res.ok) {
-				throw new Error("Failed to fetch refund");
-			}
-
-			const { refer, refunded, error } = await res.json();
-			if (refer) {
-				system.openInBrowser(refer);
-				return;
-			}
-
-			if (refunded) {
-				toast(strings.success);
-				if (installed) uninstall();
-				else render();
-				return;
-			}
-
-			toast(error || strings.error);
-		} catch (error) {
-			window.log("error", error);
-			helpers.error(error);
-		} finally {
-			$button.textContent = oldText;
 		}
 	}
 
@@ -454,13 +255,9 @@ export default async function PluginInclude(
 						.use(markdownItFootnote)
 						.render(plugin.changelogs)
 				: null,
-			purchased,
 			installed,
 			update,
 			isPaid,
-			price,
-			buy,
-			refund,
 			install,
 			uninstall,
 			currentVersion,
@@ -575,26 +372,6 @@ export default async function PluginInclude(
 				$page.header.append($settingsIcon);
 			}
 		}
-	}
-
-	async function loadAd(el) {
-		if (!helpers.canShowAds()) return;
-		try {
-			if (!(await interstitialAd?.isLoaded())) {
-				const oldText = el.textContent;
-				el.textContent = strings["loading..."];
-				await interstitialAd?.load();
-				el.textContent = oldText;
-			}
-		} catch (error) {
-			console.warn("Failed to load plugin page ad.", error);
-		}
-	}
-
-	async function getPurchase(sku) {
-		const purchases = await helpers.promisify(iap.getPurchases);
-		const purchase = purchases.find((p) => p.productIds.includes(sku));
-		return purchase;
 	}
 }
 

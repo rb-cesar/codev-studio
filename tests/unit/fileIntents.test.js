@@ -16,9 +16,6 @@ function setup() {
 		"src/handlers/intent.js",
 		{
 			fileSystem: {},
-			"lib/auth": {},
-			"lib/config": {},
-			"lib/startAd": {},
 			"lib/openFile": open,
 			"lib/loadPlugins": { isInitialPluginLoadComplete: () => pluginsReady },
 			"dialogs/select": select,

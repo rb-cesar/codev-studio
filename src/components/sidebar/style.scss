@@ -83,69 +83,6 @@ body.no-animation {
       }
     }
 
-    .user-icon-container {
-      position: sticky;
-      bottom: 0;
-      width: 100%;
-      padding: 12px 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: rgba(0, 0, 0, 0.1);
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-
-      .avatar {
-        display: block;
-        height: 32px;
-        width: 32px;
-        border-radius: 50%;
-        object-fit: cover;
-        object-position: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: 2px solid transparent;
-
-        &:hover {
-          transform: scale(1.05);
-          border-color: rgba(255, 255, 255, 0.3);
-        }
-      }
-
-      .icon {
-        height: 40px;
-        width: 40px;
-        color: currentColor;
-        font-size: 2.8em;
-        border-radius: 10px;
-        opacity: 0.6;
-        transition: all 0.2s ease;
-        margin: 0 auto;
-        cursor: pointer;
-        text-align: center;
-        line-height: 40px;
-
-        &:hover {
-          opacity: 0.9;
-          background-color: rgba(255, 255, 255, 0.08);
-        }
-
-        &.active {
-          opacity: 1;
-        }
-
-        &.avatar-loading {
-          opacity: 0.45;
-          background-color: rgba(255, 255, 255, 0.08);
-          animation: sidebar-avatar-loading 1.2s ease-in-out infinite;
-
-          &:hover {
-            opacity: 0.45;
-            background-color: rgba(255, 255, 255, 0.08);
-          }
-        }
-      }
-    }
-
     .icon {
       height: 40px;
       width: 40px;
@@ -189,21 +126,6 @@ body.no-animation {
         &::after {
           transform: translateY(-50%) scaleY(1);
           opacity: 1;
-        }
-      }
-
-      // Special styling for the favorites/sponsors icon
-      &.favorite {
-        margin-top: 8px;
-
-        &::after {
-          display: none;
-        }
-
-        &:hover {
-          color: #ff6b8a;
-          opacity: 1;
-          background-color: rgba(255, 107, 138, 0.12);
         }
       }
     }
@@ -400,92 +322,4 @@ body.no-animation {
       font-weight: 600;
     }
   }
-}
-
-@keyframes sidebar-avatar-loading {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(0.94);
-  }
-}
-
-.user-menu {
-  position: absolute;
-  bottom: 55px;
-  left: 30px;
-  width: 200px;
-  background-color: var(--popup-background-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  display: none;
-  z-index: 1000;
-  overflow: hidden;
-
-  &.active {
-    display: block;
-  }
-
-  .user-menu-header {
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-
-    .user-menu-name {
-      font-weight: 500;
-      margin-bottom: 4px;
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        background-color: var(--popup-background-color);
-        background-color: color-mix(in srgb,
-            var(--error-text-color) 20%,
-            transparent);
-        color: var(--error-text-color);
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-left: 4px;
-
-        &.verified {
-          color: var(--active-color);
-          background-color: transparent;
-          padding: 0;
-        }
-      }
-    }
-
-    .user-menu-email {
-      font-size: 12px;
-      color: var(--popup-text-color);
-      color: color-mix(in srgb, var(--popup-text-color) 70%, transparent);
-    }
-  }
-
-  .user-menu-item {
-    padding: 10px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &:hover {
-      background-color: var(--active-icon-color);
-    }
-  }
-
-  .user-menu-separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 4px 0;
-  }
-}
-
-@supports not (gap: 1px) {
-  .user-menu-item > * + * { margin-left: 8px; }
 }

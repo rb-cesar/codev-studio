@@ -37,12 +37,10 @@ import quickToolsInit from "handlers/quickToolsInit";
 import windowResize from "handlers/windowResize";
 import acode from "lib/acode";
 import actionStack from "lib/actionStack";
-import adRewards from "lib/adRewards";
 import ajax from "lib/ajax";
 import applySettings from "lib/applySettings";
 import checkFiles from "lib/checkFiles";
 import { canSaveFile } from "lib/commands";
-import config from "lib/config";
 import EditorFile from "lib/editorFile";
 import EditorManager from "lib/editorManager";
 import fileIcons from "lib/fileIcons";
@@ -57,10 +55,6 @@ import { registerPrettierFormatter } from "lib/registerPrettierFormatter";
 import restoreFiles from "lib/restoreFiles";
 import settings from "lib/settings";
 import { migrateLegacySftpProfiles } from "lib/sftpProfiles";
-import startAd, {
-	BANNER_SUPPRESSION_REASON,
-	setBannerSuppressed,
-} from "lib/startAd";
 import mustache from "mustache";
 import themes from "theme/list";
 import { initHighlighting } from "utils/codeHighlight";
@@ -71,7 +65,6 @@ import loadPolyFill from "utils/polyfill";
 import Url from "utils/Url";
 import $_fileMenu from "views/file-menu.hbs";
 import $_menu from "views/menu.hbs";
-import auth, { loginEvents } from "./lib/auth";
 
 const oldPreventDefault = TouchEvent.prototype.preventDefault;
 const previousVersionCode = Number.parseInt(localStorage.versionCode, 10);
@@ -81,12 +74,6 @@ ajax.response = (xhr) => {
 	return xhr.response;
 };
 
-ajax.configure = (xhr, url) => {
-	if (url.includes("acode.app/api")) {
-		xhr.withCredentials = true;
-	}
-};
-
 TouchEvent.prototype.preventDefault = function () {
 	if (this.cancelable) {
 		oldPreventDefault.bind(this)();
@@ -94,7 +81,6 @@ TouchEvent.prototype.preventDefault = function () {
 };
 
 loadPolyFill.apply(window);
-loginEvents.addListener(onLogin);
 window.addEventListener("resize", windowResize);
 document.addEventListener("pause", pauseHandler);
 document.addEventListener("resume", resumeHandler);
@@ -120,7 +106,6 @@ async function ensurePermission(permission) {
 async function onDeviceReady() {
 	await initEncodings(); // important to load encodings before anything else
 
-	const isFreePackage = /(free)$/.test(BuildInfo.packageName);
 	const oldResolveURL = window.resolveLocalFileSystemURL;
 	const {
 		externalCacheDirectory, //
@@ -164,8 +149,6 @@ async function onDeviceReady() {
 	window.KEYBINDING_FILE = Url.join(DATA_STORAGE, ".key-bindings.json");
 	window.log = logger.log.bind(logger);
 
-	config.HAS_PRO = !isFreePackage;
-
 	// Capture synchronous errors
 	window.addEventListener("error", (event) => {
 		const errorMsg = `Error: ${event.message}, Source: ${event.filename}, Line: ${event.lineno}, Column: ${event.colno}, Stack: ${event.error?.stack || "N/A"}`;
@@ -199,32 +182,6 @@ async function onDeviceReady() {
 	});
 
 	try {
-		await helpers.promisify(iap.startConnection).catch((e) => {
-			window.log("error", "connection error");
-			window.log("error", e);
-		});
-
-		if (localStorage.acode_pro === "true") {
-			config.HAS_PRO = true;
-		}
-
-		if (navigator.onLine) {
-			const purchases = await helpers.promisify(iap.getPurchases);
-			const isPro = purchases.find((p) =>
-				p.productIds.includes("acode_pro_new"),
-			);
-			if (isPro) {
-				config.HAS_PRO = true;
-			} else {
-				config.HAS_PRO = !isFreePackage;
-			}
-		}
-	} catch (error) {
-		window.log("error", "Purchase error");
-		window.log("error", error);
-	}
-
-	try {
 		window.ANDROID_SDK_INT = await new Promise((resolve, reject) =>
 			system.getAndroidVersion(resolve, reject),
 		);
@@ -249,7 +206,6 @@ async function onDeviceReady() {
 		return true;
 	})();
 	window.acode = acode;
-	await adRewards.init();
 	ensureAceCompatApi();
 
 	if (Number.isInteger(window.ANDROID_SDK_INT) && window.ANDROID_SDK_INT < 33) {
@@ -390,22 +346,6 @@ async function onDeviceReady() {
 				void processPendingIntents().catch(intentHandler.onError);
 			}
 			applySettings.afterRender();
-
-			// Check login status before emitting events
-			try {
-				const user = await auth.getLoggedInUser();
-				if (user) {
-					if (Boolean(user.acode_pro)) {
-						config.HAS_PRO = true;
-					}
-					loginEvents.emit();
-				}
-			} catch (error) {
-				console.error("Error checking login status:", error);
-			}
-
-			fetchPromotions();
-			startAd();
 		}, 500);
 	}
 
@@ -418,7 +358,7 @@ async function onDeviceReady() {
 		navigator.onLine
 	) {
 		cordova.plugin.http.sendRequest(
-			"https://api.github.com/repos/Acode-Foundation/Acode/releases/latest",
+			"https://api.github.com/repos/rb-cesar/codev-studio/releases/latest",
 			{
 				method: "GET",
 				responseType: "json",
@@ -529,35 +469,6 @@ function escapeHtml(value) {
 		.replaceAll(">", "&gt;")
 		.replaceAll('"', "&quot;")
 		.replaceAll("'", "&#039;");
-}
-
-async function onLogin() {
-	try {
-		const user = await auth.getLoggedInUser();
-		if (!user) return;
-		if (Boolean(user.acode_pro)) {
-			config.HAS_PRO = true;
-		}
-		if (config.HAS_PRO) {
-			setBannerSuppressed(BANNER_SUPPRESSION_REASON.PRO, true);
-		}
-	} catch (error) {
-		console.error(error);
-	}
-}
-
-async function fetchPromotions() {
-	try {
-		const res = await fetch(`${config.API_BASE}/promotions`);
-		if (res.ok) {
-			const data = await res.json();
-			if (Array.isArray(data)) {
-				localStorage.setItem("cached_promotions", JSON.stringify(data));
-			}
-		}
-	} catch (err) {
-		console.debug("Failed to fetch promotions:", err);
-	}
 }
 
 async function setDebugInfo() {
@@ -1004,7 +915,6 @@ async function pauseHandler() {
 }
 
 function resumeHandler() {
-	adRewards.handleResume();
 	if (!settings.value.checkFiles) return;
 	checkFiles();
 }

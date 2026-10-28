@@ -11,7 +11,6 @@ import {
 	getSftpProfileId,
 	getSftpProfileInfo,
 } from "./sftpProfiles";
-import { interstitialAd } from "./startAd";
 
 export default {
 	/**
@@ -39,7 +38,7 @@ export default {
 					stopConnection = true;
 				},
 			});
-			const [home] = await Promise.all([ftp.getWorkingDirectory(), loadAd()]);
+			const home = await ftp.getWorkingDirectory();
 
 			if (stopConnection) {
 				stopConnection = false;
@@ -71,7 +70,6 @@ export default {
 				res.home = home;
 			}
 			loader.destroy();
-			await helpers.showInterstitialIfReady();
 			return res;
 		} catch (err) {
 			if (stopConnection) {
@@ -255,10 +253,7 @@ export default {
 		});
 
 		try {
-			const [home] = await Promise.all([
-				connection.testConnection(connectionRequestID),
-				loadAd(),
-			]);
+			const home = await connection.testConnection(connectionRequestID);
 
 			if (stopConnection) {
 				stopConnection = false;
@@ -266,7 +261,6 @@ export default {
 			}
 
 			loader.destroy();
-			await helpers.showInterstitialIfReady();
 			return {
 				alias,
 				name: alias,
@@ -450,15 +444,3 @@ export default {
 		return null;
 	},
 };
-
-async function loadAd() {
-	if (!helpers.canShowAds()) return;
-	try {
-		if (!(await interstitialAd?.isLoaded())) {
-			toast(strings.loading);
-			await interstitialAd?.load();
-		}
-	} catch (error) {
-		console.warn("Failed to load interstitial ad.", error);
-	}
-}

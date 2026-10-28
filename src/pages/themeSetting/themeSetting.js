@@ -12,14 +12,11 @@ import { TerminalThemeManager } from "components/terminal";
 import alert from "dialogs/alert";
 import Ref from "html-tag-js/ref";
 import actionStack from "lib/actionStack";
-import config from "lib/config";
-import removeAds from "lib/removeAds";
 import appSettings from "lib/settings";
 import CustomTheme from "pages/customTheme";
 import { updateActiveTerminals } from "settings/terminalSettings";
 import ThemeBuilder from "theme/builder";
 import themes from "theme/list";
-import helpers from "utils/helpers";
 
 export default function () {
 	const $page = Page(strings.theme.capitalize());
@@ -94,7 +91,6 @@ export default function () {
 
 	app.append($page);
 	renderAppThemes();
-	helpers.showAd();
 
 	$page.addEventListener("click", clickHandler);
 
@@ -120,14 +116,12 @@ export default function () {
 		themes.list().forEach((themeSummary) => {
 			const theme = themes.get(themeSummary.id);
 			const isCurrentTheme = theme.id === currentTheme;
-			const isPremium = theme.version === "paid" && !config.HAS_PRO;
 			const $item = (
 				<Item
 					name={themeSummary.name}
-					isPremium={isPremium}
 					isCurrent={isCurrentTheme}
 					swatches={getAppThemeSwatches(theme)}
-					onclick={() => setAppTheme(theme, isPremium)}
+					onclick={() => setAppTheme(theme)}
 				/>
 			);
 			content.push($item);
@@ -312,17 +306,8 @@ export default function () {
 	 * Sets the selected theme
 	 * @param {ThemeBuilder} theme
 	 */
-	async function setAppTheme(theme, buy) {
+	async function setAppTheme(theme) {
 		if (!DOES_SUPPORT_THEME) return;
-
-		if (buy) {
-			try {
-				await removeAds();
-				renderAppThemes();
-			} catch (e) {
-				return;
-			}
-		}
 
 		if (theme.id === "custom") {
 			CustomTheme();
@@ -373,9 +358,8 @@ export default function () {
 		list.get(`[theme="${theme}"]`)?.check();
 	}
 
-	function Item({ name, swatches, onclick, isCurrent, isPremium }) {
+	function Item({ name, swatches, onclick, isCurrent }) {
 		const check = <span className="icon check"></span>;
-		const star = <span className="icon stars"></span>;
 
 		const $el = (
 			<div
@@ -389,7 +373,6 @@ export default function () {
 					<span className="text">{name}</span>
 				</div>
 				{isCurrent && check}
-				{isPremium && star}
 			</div>
 		);
 

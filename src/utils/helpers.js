@@ -1,12 +1,9 @@
 import fsOperation from "fileSystem";
 import alert from "dialogs/alert";
 import escapeStringRegexp from "escape-string-regexp";
-import adRewards from "lib/adRewards";
 import config from "lib/config";
 import fileIcons from "lib/fileIcons";
-import { interstitialAd, requestBannerForPage } from "lib/startAd";
 import { isBinaryFile } from "./binaryExtensions";
-import { isPlayStoreInstall } from "./installSource";
 import path from "./Path";
 import Uri from "./Uri";
 import Url from "./Url";
@@ -249,33 +246,6 @@ export default {
 		editorManager.onupdate("file-delete");
 		editorManager.emit("update", "file-delete");
 	},
-	canShowAds() {
-		return Boolean(!config.HAS_PRO && adRewards.canShowAds());
-	},
-	async showInterstitialIfReady() {
-		if (!this.canShowAds()) return false;
-		if (
-			typeof interstitialAd?.isLoaded === "function" &&
-			typeof interstitialAd?.show === "function" &&
-			(await interstitialAd?.isLoaded())
-		) {
-			interstitialAd.show();
-			return true;
-		}
-		return false;
-	},
-	/**
-	 * Displays ad on the current page
-	 */
-	showAd() {
-		if (!this.canShowAds()) return;
-		if (innerHeight * devicePixelRatio <= 600) return;
-
-		const $page = tag.getAll("wc-page:not(#root)").pop();
-		if ($page) {
-			requestBannerForPage($page);
-		}
-	},
 	async toInternalUri(uri) {
 		return new Promise((resolve, reject) => {
 			window.resolveLocalFileSystemURL(
@@ -498,17 +468,5 @@ export default {
 	},
 	isBinary(file) {
 		return isBinaryFile(file);
-	},
-
-	isIapAvailable() {
-		return (
-			typeof iap !== "undefined" &&
-			typeof iap.isIapAvailable === "function" &&
-			iap.isIapAvailable()
-		);
-	},
-
-	shouldAllowExternalPurchase() {
-		return !this.isIapAvailable() && !isPlayStoreInstall();
 	},
 };

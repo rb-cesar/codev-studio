@@ -52,7 +52,6 @@ export default function fontManager() {
 
 	app.append($page);
 	renderFonts();
-	helpers.showAd();
 
 	$page.addEventListener("click", clickHandler);
 

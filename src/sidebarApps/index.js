@@ -1,5 +1,3 @@
-import appSettings from "lib/settings";
-import Sponsors from "pages/sponsors";
 import SidebarApp from "./sidebarApp";
 
 const SIDEBAR_APPS_LAST_SECTION = "sidebarAppsLastSection";
@@ -12,8 +10,6 @@ let $sidebar;
 let currentSection = localStorage.getItem(SIDEBAR_APPS_LAST_SECTION);
 /**@type {SidebarApp[]} */
 const apps = [];
-/**@type {HTMLSpanElement | null} */
-let $sponsorIcon = null;
 
 /**
  * @param {string} icon icon of the app
@@ -76,10 +72,6 @@ function init($el) {
 	$apps = $sidebar.get(".app-icons-container");
 	$apps.addEventListener("click", onclick);
 	SidebarApp.init($el, $apps);
-	appSettings.on(
-		"update:showSponsorSidebarApp",
-		setSponsorSidebarAppVisibility,
-	);
 }
 
 /**
@@ -90,33 +82,6 @@ async function loadApps() {
 	add(...(await import("./searchInFiles")).default);
 	add(...(await import("./extensions")).default);
 	add(...(await import("./notification")).default);
-	setSponsorSidebarAppVisibility(appSettings.value.showSponsorSidebarApp);
-}
-
-/**
- * Adds or removes the sponsor icon in sidebar based on settings.
- * @param {boolean} visible
- */
-function setSponsorSidebarAppVisibility(visible) {
-	if (!$apps) return;
-
-	if (visible) {
-		if ($sponsorIcon?.isConnected) return;
-		$sponsorIcon = (
-			<span
-				className="icon favorite"
-				title={strings.sponsor}
-				onclick={Sponsors}
-			/>
-		);
-		$apps.append($sponsorIcon);
-		return;
-	}
-
-	if ($sponsorIcon) {
-		$sponsorIcon.remove();
-		$sponsorIcon = null;
-	}
 }
 
 /**

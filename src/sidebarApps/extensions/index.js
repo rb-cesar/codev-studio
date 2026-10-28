@@ -5,13 +5,10 @@ import Sidebar from "components/sidebar";
 import alert from "dialogs/alert";
 import prompt from "dialogs/prompt";
 import select from "dialogs/select";
-import purchaseListener from "handlers/purchase";
-import auth from "lib/auth";
 import config from "lib/config";
 import InstallState from "lib/installState";
 import loadPlugin from "lib/loadPlugin";
 import settings from "lib/settings";
-import { interstitialAd } from "lib/startAd";
 import FileBrowser from "pages/fileBrowser";
 import plugin from "pages/plugin";
 import helpers from "utils/helpers";
@@ -34,6 +31,9 @@ let isLoading = false;
 let currentFilter = null;
 let filterHasMore = true;
 let isFilterLoading = false;
+
+// Plugins pagos dependem de compra pela Google Play, que o Codev Studio não usa.
+const isFree = (plugin) => !(Number.parseFloat(plugin?.price) > 0);
 
 function withSupportedEditor(url) {
 	const separator = url.includes("?") ? "&" : "?";
@@ -154,11 +154,13 @@ async function loadMorePlugins() {
 				`${config.API_BASE}/plugins?page=${currentPage}&limit=${LIMIT}`,
 			),
 		);
-		const newPlugins = await response.json();
+		const fetchedPlugins = await response.json();
 
-		if (newPlugins.length < LIMIT) {
+		if (fetchedPlugins.length < LIMIT) {
 			hasMore = false;
 		}
+
+		const newPlugins = fetchedPlugins.filter(isFree);
 
 		installedPlugins = await listInstalledPlugins();
 		const pluginElements = newPlugins.map(ListItem);
@@ -245,8 +247,9 @@ async function runSearch(query) {
 		).readFile("json");
 
 		installedPlugins = await listInstalledPlugins();
-		$searchResult.content = plugins.length ? (
-			plugins.map(ListItem)
+		const freePlugins = plugins.filter(isFree);
+		$searchResult.content = freePlugins.length ? (
+			freePlugins.map(ListItem)
 		) : (
 			<span className="error empty">
 				{strings["no plugins found"] || strings.empty || "No plugins found"}
@@ -486,7 +489,7 @@ async function loadExplore() {
 		}
 
 		installedPlugins = await listInstalledPlugins();
-		$explore.$ul.content = plugins.map(ListItem);
+		$explore.$ul.content = plugins.filter(isFree).map(ListItem);
 		currentPage++;
 		updateHeight($explore);
 	} catch (error) {
@@ -559,7 +562,7 @@ async function getFilteredPlugins(filterState) {
 			}
 			filterState.nextPage = page + 1;
 			const hasMore = items.length === LIMIT;
-			return { items, hasMore };
+			return { items: items.filter(isFree), hasMore };
 		} catch (error) {
 			console.error(`Failed to get Filtered Plugins: `, error);
 			return { items: [], hasMore: false };
@@ -605,8 +608,8 @@ async function getFilteredPlugins(filterState) {
 				filterState.hasMoreSource = false;
 			}
 
-			const matched = data.filter((plugin) =>
-				doesPluginMatchFilter(plugin, filterState),
+			const matched = data.filter(
+				(plugin) => isFree(plugin) && doesPluginMatchFilter(plugin, filterState),
 			);
 			filterState.buffer.push(...matched);
 		} catch (error) {
@@ -826,8 +829,6 @@ function ListItem({
 		}
 		if (installPluginBtn) {
 			try {
-				let purchaseToken;
-				let product;
 				const pluginUrl = Url.join(config.API_BASE, `plugin/${id}`);
 				const remotePlugin = await fsOperation(pluginUrl)
 					.readFile("json")
@@ -836,14 +837,7 @@ function ListItem({
 					});
 
 				const { default: installPlugin } = await import("lib/installPlugin");
-				await Promise.all([
-					loadAd(),
-					installPlugin(
-						id,
-						remotePlugin.name,
-						purchaseToken ? purchaseToken : undefined,
-					),
-				]);
+				await installPlugin(id, remotePlugin.name);
 
 				const searchInput = container.querySelector('input[name="search-ext"]');
 				if (searchInput) {
@@ -864,13 +858,6 @@ function ListItem({
 				}
 				if (!$installed.collapsed) {
 					$installed.ontoggle();
-				}
-				await helpers.showInterstitialIfReady();
-
-				async function getPurchase(sku) {
-					const purchases = await helpers.promisify(iap.getPurchases);
-					const purchase = purchases.find((p) => p.productIds.includes(sku));
-					return purchase;
 				}
 			} catch (err) {
 				console.error(err);
@@ -914,23 +901,11 @@ function ListItem({
 	return $el;
 }
 
-async function loadAd() {
-	if (!helpers.canShowAds()) return;
-	try {
-		if (!(await interstitialAd?.isLoaded())) {
-			await interstitialAd?.load();
-		}
-	} catch (error) {
-		console.error(error);
-	}
-}
-
 async function uninstall(id) {
 	try {
 		const pluginDir = Url.join(PLUGIN_DIR, id);
 		const state = await InstallState.new(id);
 		await Promise.all([
-			loadAd(),
 			fsOperation(pluginDir).delete(),
 			state.delete(state.storeUrl),
 		]);
@@ -952,9 +927,6 @@ async function uninstall(id) {
 				$installed.expand();
 			}
 		}
-
-		// Show Ad If Its Free Version, interstitial Ad(iad) is loaded.
-		await helpers.showInterstitialIfReady();
 	} catch (err) {
 		helpers.error(err);
 	}

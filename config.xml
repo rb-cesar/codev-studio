@@ -7,8 +7,8 @@
     <description>
         Editor de código e terminal Linux no mesmo app, feito sobre o Acode (MIT).
     </description>
-    <author email="ajit@foxdebug.com" href="https://foxdebug.com">
-        Foxdebug
+    <author href="https://github.com/rb-cesar/codev-studio">
+        Codev Studio
     </author>
     <content src="index.html" />
     <access launch-external="yes" origin="*" />
