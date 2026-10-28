@@ -39,7 +39,7 @@ Escrever uma interface própria, dentro deste repositório, sem fork de nenhum d
 3. **O backend é o `claude` do Ubuntu**, chamado em modo `-p --input-format stream-json --output-format stream-json --verbose`, com `--resume <id>` para retomar. Assim a conta é a do terminal, sem API key, e o Agent SDK fica fora do caminho por causa da regra de login de terceiros.
 4. **Ligação com o app.** Primeira tentativa: o modo `axs lsp` do `axs` embutido, que liga o stdin/stdout de um programa a um WebSocket (já usado pelo suporte a LSP, em `src/cm/lsp/runtimes/axsBridge.ts`). Reaproveita a porta aleatória e o token do terminal. Plano B: um servidor Node pequeno no Ubuntu, também com porta aleatória e token por instalação.
 5. **Sessões** vêm de `~/.claude/projects/<pasta-codificada>/<id>.jsonl`, o formato descrito na documentação do Agent SDK.
-6. **O terminal continua existindo** como alternativa. O comando `claude-code` atual não é removido na primeira versão.
+6. **O botão "Claude" do app abre só a interface gráfica** (decidido por César em 2026-10-28; o comando `claude-code`, que abria um terminal, foi removido). O `claude` continua disponível digitando-o num terminal comum.
 
 ## Consequências
 

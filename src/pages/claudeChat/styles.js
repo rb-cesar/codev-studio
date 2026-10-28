@@ -1,5 +1,6 @@
 // Passed to EditorFile as an inline stylesheet, so it must not start with "/" or "http".
 export default `.claude-chat {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -13,6 +14,143 @@ export default `.claude-chat {
 
 .claude-chat * {
 	box-sizing: border-box;
+}
+
+.claude-chat-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	border-bottom: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+}
+
+.claude-chat-hbtn {
+	flex-shrink: 0;
+	min-height: 40px;
+	padding: 0 12px;
+	border: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+	border-radius: 10px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 14px;
+}
+
+.claude-chat-htitle {
+	flex: 1;
+	min-width: 0;
+	min-height: 40px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 0 6px;
+	border: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+}
+
+.claude-chat-htitle-text,
+.claude-chat-htitle-folder {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.claude-chat-htitle-text {
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.claude-chat-htitle-folder {
+	font-size: 12px;
+	line-height: 1.25;
+	opacity: 0.7;
+}
+
+.claude-sessions {
+	position: absolute;
+	inset: 0;
+	z-index: 5;
+	display: flex;
+	flex-direction: column;
+	background: var(--secondary-color, #313131);
+}
+
+.claude-sessions-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 6px 8px 6px 14px;
+	border-bottom: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+}
+
+.claude-sessions-list {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.claude-sessions-empty {
+	padding: 24px 16px;
+	text-align: center;
+	opacity: 0.7;
+}
+
+.claude-sessions-empty.error {
+	color: var(--error-text-color, #ff9b9b);
+	opacity: 1;
+}
+
+.claude-session-row {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid var(--border-color, rgba(204, 204, 204, 0.2));
+}
+
+.claude-session-row.current {
+	box-shadow: inset 3px 0 0 var(--active-color, #888);
+}
+
+.claude-session-open {
+	flex: 1;
+	min-width: 0;
+	min-height: 56px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 2px;
+	padding: 8px 12px;
+	border: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+}
+
+.claude-session-title {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	font-weight: 600;
+}
+
+.claude-session-sub {
+	font-size: 12px;
+	opacity: 0.7;
+}
+
+.claude-session-rename {
+	flex-shrink: 0;
+	padding: 0 14px;
+	border: none;
+	background: transparent;
+	color: var(--link-text-color, #4ba3ff);
+	font: inherit;
+	font-size: 13px;
 }
 
 .claude-chat-messages {
