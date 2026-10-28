@@ -9,14 +9,14 @@ A ideia é ter no celular um ambiente de desenvolvimento completo: abrir o proje
 ## O que muda em relação ao Acode
 
 - **Ubuntu 24.04 no terminal.** O terminal embutido do Acode usa Alpine. Aqui ele roda Ubuntu via proot, com `apt` e alguns pacotes básicos já instalados (git, curl, wget, nano).
-- **Claude no menu.** Um item fixo abre uma aba de conversa com o Claude Code, sem passar pelo terminal: respostas em streaming com markdown, chamadas de ferramenta recolhíveis, botão de parar e lista de sessões (nova, retomar, renomear). Cada sessão mostra a pasta em que trabalha, e as sessões iniciadas no terminal também aparecem. O ambiente do Ubuntu foi ajustado para o `claude` funcionar: `/tmp` com as permissões que ele exige, shells começando na pasta pessoal e `npm` instalando pacotes globais dentro do Ubuntu. O Claude Code em si é instalado pelo usuário, com Node.js e `npm install -g @anthropic-ai/claude-code`.
+- **Claude no menu.** Um item fixo abre uma aba de conversa com o Claude Code, sem passar pelo terminal: respostas em streaming com markdown, chamadas de ferramenta recolhíveis, botão de parar, janelas para permitir ou negar cada ação (com os modos Perguntar antes, Aceitar edições e Plano) e lista de sessões (nova, retomar, renomear). Cada sessão mostra a pasta em que trabalha, e as sessões iniciadas no terminal também aparecem. O ambiente do Ubuntu foi ajustado para o `claude` funcionar: `/tmp` com as permissões que ele exige, shells começando na pasta pessoal e `npm` instalando pacotes globais dentro do Ubuntu. O Claude Code em si é instalado pelo usuário, com Node.js e `npm install -g @anthropic-ai/claude-code`.
 - **Comando `code`.** Funciona como o `code` do VS Code: `code .` abre a pasta atual na barra lateral e `code src/main.js` abre o arquivo no editor. A comunicação com o app é feita por uma sequência de escape do próprio terminal, sem abrir porta de rede.
 - **Terminal local protegido.** O servidor local que conecta o app ao terminal passou a usar porta aleatória e um token por instalação, guardados em arquivos privados do app. Assim, outros apps do celular não conseguem abrir sessões no terminal.
 - **Identidade própria.** Novo id de pacote (`dev.codev.studio`), nome, esquema de link (`codevstudio://`) e provedor de arquivos, para poder instalar junto com o Acode original. A verificação de atualização do Acode foi removida.
 
 ## Próximos passos
 
-- Claude Code: janelas de permissão para ferramentas e modo plano na aba de conversa.
+- Claude Code: tela para as perguntas com opções (`AskUserQuestion`) e exclusão de sessões.
 - Acesso remoto ao PC a partir do app, por SSH dentro de uma VPN, para trabalhar nos projetos do computador pelo celular.
 
 ## Build

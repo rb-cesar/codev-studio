@@ -12,7 +12,7 @@ export const DEFAULT_CWD = "/public";
 export function buildClaudeCommand({
 	cwd = DEFAULT_CWD,
 	resumeId = null,
-	permissionMode = "acceptEdits",
+	permissionMode = "default",
 	model = null,
 } = {}) {
 	const claudeArgs = [
@@ -26,9 +26,9 @@ export function buildClaudeCommand({
 		"--include-partial-messages",
 		"--permission-mode",
 		permissionMode,
-		// Nobody answers permission prompts yet: anything that would ask is denied.
-		"--permission-prompts",
-		"none",
+		// Tools that need approval are asked over stdout (control_request) and answered over stdin.
+		"--permission-prompt-tool",
+		"stdio",
 	];
 	if (model) claudeArgs.push("--model", model);
 	if (resumeId) claudeArgs.push("--resume", resumeId);
@@ -60,12 +60,19 @@ export default class ClaudeProcess {
 	 * @param {(event: Record<string, any>) => void} handlers.onEvent a parsed stdout line
 	 * @param {(line: string) => void} handlers.onLog stderr, or a stdout line that is not JSON
 	 * @param {(code: number) => void} handlers.onExit the process ended
+	 * @param {(event: Record<string, any>) => void} [handlers.onPermission] a can_use_tool control_request
+	 * @param {(requestId: string) => void} [handlers.onPermissionCancel] Claude withdrew a pending request
 	 * @param {object} [executor] defaults to the app's global Executor
 	 */
-	constructor({ onEvent, onLog, onExit }, executor = globalThis.Executor) {
+	constructor(
+		{ onEvent, onLog, onExit, onPermission, onPermissionCancel },
+		executor = globalThis.Executor,
+	) {
 		this.onEvent = onEvent;
 		this.onLog = onLog;
 		this.onExit = onExit;
+		this.onPermission = onPermission;
+		this.onPermissionCancel = onPermissionCancel;
 		this.executor = executor;
 		this.uuid = null;
 		this.alive = false;
@@ -100,7 +107,15 @@ export default class ClaudeProcess {
 				this.onLog?.(line);
 				return;
 			}
-			this.onEvent?.(event);
+			if (event?.type === "control_request") {
+				if (event.request?.subtype === "can_use_tool") {
+					this.onPermission?.(event);
+				}
+			} else if (event?.type === "control_cancel_request") {
+				this.onPermissionCancel?.(event.request_id);
+			} else {
+				this.onEvent?.(event);
+			}
 		} else if (type === "stderr") {
 			if (data) this.onLog?.(String(data));
 		} else if (type === "exit") {
@@ -129,6 +144,27 @@ export default class ClaudeProcess {
 			type: "control_request",
 			request_id: `req_${Date.now()}_${requestCounter++}`,
 			request: { subtype: "interrupt" },
+		});
+	}
+
+	/**
+	 * Answers a permission request.
+	 * @param {string} requestId the request_id of the control_request
+	 * @param {Record<string, any>} response see lib/claude/permissions
+	 */
+	respond(requestId, response) {
+		return this.#writeJson({
+			type: "control_response",
+			response: { subtype: "success", request_id: requestId, response },
+		});
+	}
+
+	/** Switches the permission mode of the running session. */
+	setPermissionMode(mode) {
+		return this.#writeJson({
+			type: "control_request",
+			request_id: `req_${Date.now()}_${requestCounter++}`,
+			request: { subtype: "set_permission_mode", mode },
 		});
 	}
 

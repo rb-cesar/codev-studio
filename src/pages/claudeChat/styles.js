@@ -414,11 +414,110 @@ export default `.claude-chat {
 	color: var(--error-text-color, #ff9b9b);
 }
 
+.claude-chat-statusrow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 36px;
+	padding: 2px 10px;
+}
+
+.claude-chat-mode {
+	flex-shrink: 0;
+	min-height: 32px;
+	padding: 0 12px;
+	border: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+	border-radius: 16px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: 13px;
+}
+
 .claude-chat-status {
-	min-height: 22px;
-	padding: 0 14px;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-size: 12px;
 	opacity: 0.7;
+}
+
+.claude-modes {
+	top: auto;
+}
+
+.claude-permission {
+	display: flex;
+	flex-direction: column;
+	max-height: 60%;
+	border-top: 1px solid var(--border-color, rgba(204, 204, 204, 0.35));
+	background: var(--secondary-color, #313131);
+}
+
+.claude-permission-title {
+	padding: 10px 14px 4px;
+	font-weight: 600;
+}
+
+.claude-permission-count {
+	font-weight: 400;
+	font-size: 12px;
+	opacity: 0.7;
+}
+
+.claude-permission-body {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding: 0 14px;
+}
+
+.claude-permission-heading {
+	margin-bottom: 4px;
+	font-size: 13px;
+	word-break: break-all;
+}
+
+.claude-permission-code {
+	margin: 0 0 6px;
+	padding: 8px 10px;
+	max-height: 12em;
+	overflow: auto;
+	border-radius: 8px;
+	background: var(--primary-color, #1e1e1e);
+	font-family: "Roboto Mono", monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.claude-permission-reason {
+	margin-bottom: 6px;
+	font-size: 12px;
+	opacity: 0.75;
+}
+
+.claude-permission-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 8px 10px 10px;
+}
+
+.claude-permission-actions .claude-chat-hbtn {
+	flex: 1 1 40%;
+	min-height: 44px;
+}
+
+.claude-permission-actions .claude-chat-hbtn.primary {
+	border-color: transparent;
+	background: var(--active-color, #555);
+	color: var(--active-text-color, var(--primary-text-color, #fff));
+	font-weight: 600;
 }
 
 .claude-chat-composer {

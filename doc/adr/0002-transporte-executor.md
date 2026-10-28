@@ -27,7 +27,7 @@ A linha de comando é montada com `quotePosixShellArg` para cada argumento, e o 
 ## Consequências
 
 - O processo vive no serviço em primeiro plano do `Executor`, com a notificação que ele já mostra. Se o Android matar o serviço, a próxima mensagem inicia outro processo com `--resume <id da sessão>`.
-- Nesta primeira versão ninguém responde a pedidos de permissão: o `claude` roda com `--permission-prompts none`, e tudo o que pediria permissão é negado. O modo é `acceptEdits`, então ler e editar arquivos funciona e comandos de shell não. O passo 3 trata as permissões pelo protocolo de controle do `stream-json`.
-- `--permission-prompts` existe no Claude Code 2.1.312 (testado no ambiente de desenvolvimento). Se o `claude` do celular for mais antigo e não conhecer a opção, ele falha ao iniciar e a aba mostra a saída de erro; `npm update -g @anthropic-ai/claude-code` resolve.
+- Nos passos 1 e 2 ninguém respondia a pedidos de permissão: o `claude` rodava com `--permission-prompts none`, e tudo o que pediria permissão era negado. O passo 3 trocou isso pelo protocolo de controle do `stream-json` (`--permission-prompt-tool stdio`), descrito na [ADR 0004](0004-permissoes-e-modo-plano.md).
+- As opções do `claude` usadas aqui foram testadas no Claude Code 2.1.312. Se o `claude` do celular for mais antigo e não conhecer uma opção, ele falha ao iniciar e a aba mostra a saída de erro; `npm update -g @anthropic-ai/claude-code` resolve.
 - Interromper um turno envia um `control_request` de `interrupt`. Se o `claude` não responder em 4 segundos, a aba encerra o processo e a conversa continua depois por `--resume`.
 - A ADR 0001 continua valendo no resto. O trecho sobre o `axs lsp` fica como alternativa descartada.

@@ -60,7 +60,7 @@ Escrever uma interface própria, dentro deste repositório, sem fork de nenhum d
 
 1. Aba "Claude" com conversa, campo de texto e botão de parar.
 2. Lista de sessões: nova, retomar, renomear.
-3. Janelas de permissão de ferramentas e modo plano.
+3. Janelas de permissão de ferramentas e modo plano ([ADR 0004](0004-permissoes-e-modo-plano.md)).
 4. Botão "Claude" na tela de boas-vindas abrindo a aba na pasta do projeto.
 
 Cada passo vai em PR separado, para ser testado no APK antes do seguinte.

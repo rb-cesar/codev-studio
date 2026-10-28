@@ -7,7 +7,11 @@
  *
  * Message: { id, role: "user" | "assistant" | "notice", blocks: Block[], streaming, kind? }
  * Block:   { type: "text" | "thinking", text }
- *        | { type: "tool_use", id, name, input, inputJson, result: { text, isError } | null }
+ *        | { type: "tool_use", id, name, input, inputJson, result: { text, isError } | null,
+ *            permission?: "pending" | "allowed" | "denied" }
+ *
+ * `pending` holds the permission requests (see lib/claude/permissions) Claude is waiting on,
+ * oldest first; `permissionMode` is the mode the session runs in.
  */
 
 const SUMMARY_KEYS = [
@@ -85,6 +89,9 @@ export default class ChatModel {
 		/** @type {{ ok: boolean, text: string, cost: number | null } | null} */
 		this.lastResult = null;
 		this.interrupted = false;
+		this.permissionMode = "default";
+		/** @type {Array<object>} */
+		this.pending = [];
 		this.listeners = new Set();
 		this.current = null;
 		this.byApiId = new Map();
@@ -112,8 +119,61 @@ export default class ChatModel {
 		this.busy = false;
 		this.lastResult = null;
 		this.interrupted = false;
+		this.pending = [];
 		this.current = null;
 		this.byApiId = new Map();
+		this.emit();
+	}
+
+	/** A permission request arrived; the tool call it belongs to is marked as waiting. */
+	requestPermission(request) {
+		if (this.pending.some((item) => item.requestId === request.requestId)) {
+			return;
+		}
+		this.pending.push(request);
+		const block = this.findToolUse(request.toolUseId);
+		if (block) block.permission = "pending";
+		this.emit();
+	}
+
+	/**
+	 * The user answered a request.
+	 * @param {string} requestId
+	 * @param {"allowed" | "denied"} outcome
+	 */
+	resolvePermission(requestId, outcome) {
+		const request = this.pending.find((item) => item.requestId === requestId);
+		if (!request) return;
+		this.pending = this.pending.filter((item) => item !== request);
+		const block = this.findToolUse(request.toolUseId);
+		if (block) block.permission = outcome;
+		this.emit();
+	}
+
+	/** Claude withdrew a request (a turn was interrupted, or another client answered). */
+	cancelPermission(requestId) {
+		const request = this.pending.find((item) => item.requestId === requestId);
+		if (!request) return;
+		this.pending = this.pending.filter((item) => item !== request);
+		const block = this.findToolUse(request.toolUseId);
+		if (block?.permission === "pending") block.permission = undefined;
+		this.emit();
+	}
+
+	/** Drops every waiting request (the turn ended or the process is gone). */
+	clearPermissions() {
+		if (!this.pending.length) return;
+		for (const request of this.pending) {
+			const block = this.findToolUse(request.toolUseId);
+			if (block?.permission === "pending") block.permission = undefined;
+		}
+		this.pending = [];
+		this.emit();
+	}
+
+	setPermissionMode(mode) {
+		if (this.permissionMode === mode) return;
+		this.permissionMode = mode;
 		this.emit();
 	}
 
@@ -224,6 +284,7 @@ export default class ChatModel {
 				if (event.subtype === "init") {
 					this.sessionId = event.session_id || this.sessionId;
 					this.model = event.model || this.model;
+					if (event.permissionMode) this.permissionMode = event.permissionMode;
 					changed = true;
 				}
 				break;
@@ -368,6 +429,10 @@ export default class ChatModel {
 				text: textOf(part.content),
 				isError: part.is_error === true,
 			};
+			// Claude can switch to plan mode by itself.
+			if (block.name === "EnterPlanMode" && !block.result.isError) {
+				this.permissionMode = "plan";
+			}
 			changed = true;
 		}
 		return changed;
@@ -392,6 +457,7 @@ export default class ChatModel {
 				typeof event.total_cost_usd === "number" ? event.total_cost_usd : null,
 		};
 		this.busy = false;
+		this.pending = [];
 		this.finishStreaming();
 		const interrupted = this.interrupted;
 		this.interrupted = false;

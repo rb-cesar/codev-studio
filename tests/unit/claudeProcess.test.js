@@ -27,7 +27,7 @@ describe("buildClaudeCommand", () => {
 		expect(command).toContain("'--input-format' 'stream-json'");
 		expect(command).toContain("'--output-format' 'stream-json'");
 		expect(command).toContain("'--include-partial-messages'");
-		expect(command).toContain("'--permission-prompts' 'none'");
+		expect(command).toContain("'--permission-prompt-tool' 'stdio'");
 		expect(command).not.toContain("--resume");
 	});
 
@@ -71,15 +71,19 @@ describe("ClaudeProcess", () => {
 		const events = [];
 		const logs = [];
 		const exits = [];
+		const permissions = [];
+		const cancels = [];
 		const proc = new ClaudeProcess(
 			{
 				onEvent: (event) => events.push(event),
 				onLog: (line) => logs.push(line),
 				onExit: (code) => exits.push(code),
+				onPermission: (event) => permissions.push(event),
+				onPermissionCancel: (id) => cancels.push(id),
 			},
 			executor,
 		);
-		return { executor, proc, events, logs, exits };
+		return { executor, proc, events, logs, exits, permissions, cancels };
 	}
 
 	it("starts inside the sandbox and parses stdout lines as JSON", async () => {
@@ -122,6 +126,52 @@ describe("ClaudeProcess", () => {
 		expect(message.type).toBe("control_request");
 		expect(message.request).toEqual({ subtype: "interrupt" });
 		expect(message.request_id).toMatch(/^req_/);
+	});
+
+	it("routes permission requests and cancellations away from the event stream", async () => {
+		const { executor, proc, events, permissions, cancels } = setup();
+		await proc.start({});
+		const request = {
+			type: "control_request",
+			request_id: "r1",
+			request: { subtype: "can_use_tool", tool_name: "Bash", input: {} },
+		};
+		executor.onData("stdout", JSON.stringify(request));
+		executor.onData(
+			"stdout",
+			'{"type":"control_cancel_request","request_id":"r1"}',
+		);
+		executor.onData(
+			"stdout",
+			'{"type":"control_request","request_id":"r2","request":{"subtype":"other"}}',
+		);
+		executor.onData("stdout", '{"type":"control_response"}');
+
+		expect(permissions).toEqual([request]);
+		expect(cancels).toEqual(["r1"]);
+		expect(events).toEqual([{ type: "control_response" }]);
+	});
+
+	it("answers a permission request and switches the permission mode", async () => {
+		const { executor, proc } = setup();
+		await proc.start({});
+		await proc.respond("r1", { behavior: "deny", message: "não" });
+		await proc.setPermissionMode("plan");
+
+		expect(JSON.parse(executor.write.mock.calls[0][1])).toEqual({
+			type: "control_response",
+			response: {
+				subtype: "success",
+				request_id: "r1",
+				response: { behavior: "deny", message: "não" },
+			},
+		});
+		const mode = JSON.parse(executor.write.mock.calls[1][1]);
+		expect(mode.type).toBe("control_request");
+		expect(mode.request).toEqual({
+			subtype: "set_permission_mode",
+			mode: "plan",
+		});
 	});
 
 	it("reports the exit code and refuses to write afterwards", async () => {
