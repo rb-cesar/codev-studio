@@ -856,6 +856,20 @@ Additional Info:
 			window.toast(`Failed to open Claude Code: ${error.message || error}`);
 		}
 	},
+	/**
+	 * Opens the Claude chat tab (a chat UI on top of `claude -p --output-format stream-json`).
+	 */
+	async "claude-chat"() {
+		try {
+			const { default: openClaudeChat } = await import(
+				/* webpackChunkName: "claudeChat" */ "pages/claudeChat"
+			);
+			openClaudeChat();
+		} catch (error) {
+			console.error("Failed to open Claude chat:", error);
+			window.toast(`Failed to open Claude chat: ${error.message || error}`);
+		}
+	},
 	async "running-processes"() {
 		const { default: RunningProcesses } = await import(
 			"pages/runningProcesses"
