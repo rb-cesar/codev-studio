@@ -5,7 +5,9 @@ import loader from "dialogs/loader";
 import multiPrompt from "dialogs/multiPrompt";
 import { createSftpProfileUrl } from "lib/sftpProfiles";
 import helpers from "utils/helpers";
+import { messageKeyFor } from "./failures";
 import { runPairing } from "./pairingFlow";
+import scanQrText from "./scanQr";
 
 function askInvitation(previous) {
 	return multiPrompt(
@@ -17,6 +19,23 @@ function askInvitation(previous) {
 				type: "text",
 				value: previous.alias || strings["pair pc default name"],
 				required: true,
+			},
+			{
+				id: "scan",
+				placeholder: strings["pair pc scan qr"],
+				type: "text",
+				readOnly: true,
+				async onclick() {
+					try {
+						const text = await scanQrText();
+						if (text) this.prompt.$body.get("#invitation").value = text;
+					} catch (error) {
+						const messageKey = messageKeyFor(error);
+						await helpers.error(
+							messageKey ? strings[messageKey] : (error?.message ?? error),
+						);
+					}
+				},
 			},
 			{
 				id: "invitation",

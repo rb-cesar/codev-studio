@@ -213,6 +213,9 @@
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
             <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE" />
             <uses-permission android:name="android.permission.VIBRATE" />
+            <!-- Ler o QR code de pareamento com o PC (a câmera é opcional). -->
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-feature android:name="android.hardware.camera" android:required="false" />
         </config-file>
 
         <hook type="before_prepare" src="hooks/restore-cordova-resources.js" />

@@ -898,5 +898,9 @@
 	"pair pc wrong host": "Um aparelho respondeu, mas não é o PC deste convite. Nada foi enviado a ele.",
 	"pair pc code refused": "O PC recusou o código. Ele pode ter vencido ou já foi usado. Abra um novo pareamento no PC.",
 	"pair pc not approved": "O PC não aprovou este celular a tempo. Abra um novo pareamento e responda s no PC.",
-	"pair pc sftp failed": "O PC aprovou este celular, mas não conseguiu abrir as pastas."
+	"pair pc sftp failed": "O PC aprovou este celular, mas não conseguiu abrir as pastas.",
+	"pair pc scan qr": "Ler o QR code com a câmera",
+	"pair pc scanning": "Aponte a câmera para o QR code que aparece no PC",
+	"pair pc camera denied": "O acesso à câmera foi negado. Libere nas configurações do Android para este app, ou cole o texto do convite.",
+	"pair pc camera unavailable": "Não foi possível abrir a câmera. Cole o texto do convite."
 }

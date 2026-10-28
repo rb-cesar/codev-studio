@@ -11,6 +11,15 @@ const MESSAGE_KEY_BY_NATIVE_CODE = Object.freeze({
 	PC_PAIRING_SFTP_FAILED: "pair pc sftp failed",
 });
 
+// Nomes de erro do getUserMedia (câmera), que o navegador do Android devolve.
+const MESSAGE_KEY_BY_CAMERA_ERROR = Object.freeze({
+	NotAllowedError: "pair pc camera denied",
+	SecurityError: "pair pc camera denied",
+	NotFoundError: "pair pc camera unavailable",
+	NotReadableError: "pair pc camera unavailable",
+	OverconstrainedError: "pair pc camera unavailable",
+});
+
 /**
  * Chave de texto (em src/lang) que explica o erro, ou null se não for um erro
  * conhecido (quem chama mostra a mensagem original).
@@ -21,7 +30,11 @@ export function messageKeyFor(error) {
 	if (error instanceof InvalidInvitationError) {
 		return "pair pc invalid invitation";
 	}
-	return MESSAGE_KEY_BY_NATIVE_CODE[error?.code] ?? null;
+	return (
+		MESSAGE_KEY_BY_NATIVE_CODE[error?.code] ??
+		MESSAGE_KEY_BY_CAMERA_ERROR[error?.name] ??
+		null
+	);
 }
 
 /** O usuário cancelou a espera; não há erro para mostrar. */
