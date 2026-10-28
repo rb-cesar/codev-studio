@@ -887,5 +887,16 @@
 	"settings-info-editor-wrapping-indent": "Choose whether wrapped text starts at the left edge, matches the original line's indentation, or is indented further. Each extra level uses your tab size.",
 	"icon pack": "Icon pack",
 	"settings-info-icon-pack": "Choose the icons used for files and folders in the explorer and file lists across the app.",
-	"unavailable": "unavailable"
+	"unavailable": "unavailable",
+	"pair pc": "Parear com o PC",
+	"pair pc default name": "Meu PC",
+	"pair pc invitation": "Convite (texto do QR code)",
+	"pair pc help": "No PC, abra o codev-remote-desktop com --pair. Copie a linha que começa com Convite: e cole aqui; depois responda s no PC para aprovar este celular.",
+	"pair pc waiting": "Aguardando você aprovar este celular no PC...",
+	"pair pc invalid invitation": "Este não é um convite de PC válido. Copie o texto inteiro, que começa com codev-pair://.",
+	"pair pc unreachable": "Não foi possível alcançar o PC. Confira se ele está na mesma rede Wi-Fi e se o codev-remote-desktop está aberto com --pair.",
+	"pair pc wrong host": "Um aparelho respondeu, mas não é o PC deste convite. Nada foi enviado a ele.",
+	"pair pc code refused": "O PC recusou o código. Ele pode ter vencido ou já foi usado. Abra um novo pareamento no PC.",
+	"pair pc not approved": "O PC não aprovou este celular a tempo. Abra um novo pareamento e responda s no PC.",
+	"pair pc sftp failed": "O PC aprovou este celular, mas não conseguiu abrir as pastas."
 }

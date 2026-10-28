@@ -11,6 +11,9 @@ module.exports = {
   cancelConnection: function (requestId, onSuccess, onFail) {
     cordova.exec(onSuccess, onFail, 'Sftp', 'cancelConnection', [requestId]);
   },
+  pairWithPc: function (requestId, endpoints, fingerprint, code, onSuccess, onFail) {
+    cordova.exec(onSuccess, onFail, 'Sftp', 'pairWithPc', [requestId, endpoints, fingerprint, code]);
+  },
   saveProfile: function (profileId, host, port, username, authType, password, keyFile, passphrase, onSuccess, onFail) {
     cordova.exec(onSuccess, onFail, 'Sftp', 'saveProfile', [profileId, host, port, username, authType, password, keyFile, passphrase]);
   },

@@ -17,6 +17,7 @@ import actionStack from "lib/actionStack";
 import checkFiles from "lib/checkFiles";
 import config from "lib/config";
 import openFolder from "lib/openFolder";
+import pairWithPc from "lib/pcPairing/pairWithPc";
 import projects from "lib/projects";
 import recents from "lib/recents";
 import remoteStorage from "lib/remoteStorage";
@@ -494,6 +495,13 @@ function FileBrowserInclude(mode, info, doesOpenLast = true) {
 				case "addFtp":
 				case "addSftp": {
 					const storage = await remoteStorage[action]();
+					if (!storage) break;
+					updateStorage(storage);
+					break;
+				}
+
+				case "pairPc": {
+					const storage = await pairWithPc();
 					if (!storage) break;
 					updateStorage(storage);
 					break;

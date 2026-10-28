@@ -887,5 +887,16 @@
 	"plugin-review:error-max-length": "Rəy ən çox {max} simvoldan ibarət olmalıdır.",
 	"plugin-review:error-downvote-comment": "Nəyin yaxşılaşdırıla biləcəyini tərtibatçıya bildir.",
 	"plugin-review:error-empty": "Şərh əlavə et və ya «Bəyən» seçimini et.",
-	"plugin-review:unrated": "Qiymətləndirilməyib"
+	"plugin-review:unrated": "Qiymətləndirilməyib",
+	"pair pc": "Pair with PC",
+	"pair pc default name": "My PC",
+	"pair pc invitation": "Invitation (QR code text)",
+	"pair pc help": "On the PC, start codev-remote-desktop with --pair. Copy the line that starts with Convite: and paste it here, then answer s on the PC to approve this phone.",
+	"pair pc waiting": "Waiting for you to approve this phone on the PC...",
+	"pair pc invalid invitation": "This is not a valid PC invitation. Copy the whole text that starts with codev-pair://.",
+	"pair pc unreachable": "Could not reach the PC. Check that it is on the same Wi-Fi network and that codev-remote-desktop is running with --pair.",
+	"pair pc wrong host": "A device answered, but it is not the PC of this invitation. Nothing was sent to it.",
+	"pair pc code refused": "The PC refused the code. It may have expired or already been used. Start a new pairing on the PC.",
+	"pair pc not approved": "The PC did not approve this phone in time. Start a new pairing and answer s on the PC.",
+	"pair pc sftp failed": "The PC approved this phone, but could not open its folders."
 }
