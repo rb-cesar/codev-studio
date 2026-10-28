@@ -104,6 +104,64 @@ export default class ChatModel {
 		return `m${this.nextId++}`;
 	}
 
+	/** Forgets the whole conversation (a new session, or another one is being opened). */
+	reset() {
+		this.messages = [];
+		this.sessionId = null;
+		this.model = null;
+		this.busy = false;
+		this.lastResult = null;
+		this.interrupted = false;
+		this.current = null;
+		this.byApiId = new Map();
+		this.emit();
+	}
+
+	/**
+	 * Fills the conversation from a stored session.
+	 * @param {Array<{ k: string }>} entries as returned by SessionStore.load()
+	 */
+	loadHistory(entries) {
+		this.messages = [];
+		this.current = null;
+		this.byApiId = new Map();
+
+		for (const entry of entries || []) {
+			if (entry.k === "user") {
+				this.messages.push({
+					id: this.newId(),
+					role: "user",
+					blocks: [{ type: "text", text: entry.text }],
+					streaming: false,
+				});
+			} else if (entry.k === "assistant") {
+				this.messages.push({
+					id: this.newId(),
+					role: "assistant",
+					blocks: entry.blocks.map((block) =>
+						block.type === "tool_use"
+							? {
+									type: "tool_use",
+									id: block.id,
+									name: block.name,
+									input: block.input || {},
+									inputJson: "",
+									result: null,
+								}
+							: { type: block.type, text: block.text },
+					),
+					streaming: false,
+				});
+			} else if (entry.k === "result") {
+				const block = this.findToolUse(entry.toolUseId);
+				if (block) {
+					block.result = { text: entry.text || "", isError: !!entry.isError };
+				}
+			}
+		}
+		this.emit();
+	}
+
 	addUserMessage(text) {
 		this.messages.push({
 			id: this.newId(),

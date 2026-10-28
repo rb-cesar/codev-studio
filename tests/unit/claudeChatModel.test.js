@@ -251,6 +251,80 @@ describe("ChatModel", () => {
 	});
 });
 
+describe("ChatModel sessions", () => {
+	it("shows a stored session and attaches results to its tool calls", () => {
+		const model = new ChatModel();
+		model.loadHistory([
+			{ k: "user", text: "leia o README" },
+			{
+				k: "assistant",
+				id: "msg_1",
+				blocks: [
+					{ type: "thinking", text: "preciso ler" },
+					{
+						type: "tool_use",
+						id: "toolu_1",
+						name: "Read",
+						input: { file_path: "/a/README.md" },
+					},
+				],
+			},
+			{ k: "result", toolUseId: "toolu_1", text: "# Rea", isError: false },
+			{ k: "result", toolUseId: "toolu_gone", text: "órfão", isError: true },
+			{
+				k: "assistant",
+				id: "msg_2",
+				blocks: [{ type: "text", text: "Pronto." }],
+			},
+		]);
+
+		expect(model.messages.map((message) => message.role)).toEqual([
+			"user",
+			"assistant",
+			"assistant",
+		]);
+		const tool = model.messages[1].blocks[1];
+		expect(tool.result).toEqual({ text: "# Rea", isError: false });
+		expect(model.messages[2].blocks[0].text).toBe("Pronto.");
+		expect(model.busy).toBe(false);
+	});
+
+	it("keeps going after a stored session is shown", () => {
+		const model = new ChatModel();
+		model.loadHistory([{ k: "user", text: "oi" }]);
+		model.addUserMessage("e agora?");
+		textTurn(model, ["Agora sim."]);
+		expect(model.messages).toHaveLength(3);
+		expect(model.messages[2].blocks[0].text).toBe("Agora sim.");
+	});
+
+	it("starts clean after reset", () => {
+		const model = new ChatModel();
+		model.apply({ type: "system", subtype: "init", session_id: SESSION });
+		model.addUserMessage("oi");
+		textTurn(model, ["olá"]);
+		let calls = 0;
+		model.onChange(() => calls++);
+
+		model.reset();
+
+		expect(model.messages).toEqual([]);
+		expect(model.sessionId).toBeNull();
+		expect(model.busy).toBe(false);
+		expect(calls).toBe(1);
+		// A late message of the old turn must not reuse the old streaming target.
+		expect(
+			model.apply(
+				stream({
+					type: "content_block_delta",
+					index: 0,
+					delta: { type: "text_delta", text: "tarde" },
+				}),
+			),
+		).toBe(false);
+	});
+});
+
 describe("summarizeToolUse", () => {
 	it("prefers the field that best describes the call", () => {
 		expect(summarizeToolUse({ input: { command: "ls   -la\n/tmp" } })).toBe(

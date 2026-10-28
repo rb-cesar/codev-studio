@@ -79,13 +79,8 @@ function createWelcomeContent() {
 						onClick={() => acode.exec("new-terminal")}
 					/>
 					<ActionRow
-						icon="terminal"
-						label="Claude Code"
-						onClick={() => acode.exec("claude-code")}
-					/>
-					<ActionRow
 						icon="message-circle"
-						label="Claude Chat"
+						label="Claude"
 						onClick={() => acode.exec("claude-chat")}
 					/>
 					<ActionRow

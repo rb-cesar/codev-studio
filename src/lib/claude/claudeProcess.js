@@ -35,7 +35,8 @@ export function buildClaudeCommand({
 
 	// Same preparation the interactive shell does (see initrc): a sticky /tmp and no Android PREFIX.
 	const script = [
-		'cd "$1" 2>/dev/null || cd /public',
+		// A folder the sandbox cannot reach is an error, not a silent move to /public.
+		'cd "$1" || { echo "A pasta $1 não existe ou não está acessível no Ubuntu do app." >&2; exit 97; }',
 		"shift",
 		"export TMPDIR=/tmp",
 		'[ "$(stat -c %a /tmp)" = 1777 ] || chmod 1777 /tmp',

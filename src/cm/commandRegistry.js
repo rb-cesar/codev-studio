@@ -661,18 +661,8 @@ function registerCoreCommands() {
 		},
 	});
 	addCommand({
-		name: "openClaudeCode",
-		description: "Open Claude Code",
-		readOnly: true,
-		requiresView: false,
-		run() {
-			acode.exec("claude-code");
-			return true;
-		},
-	});
-	addCommand({
-		name: "openClaudeChat",
-		description: "Open Claude Chat",
+		name: "openClaude",
+		description: "Open Claude",
 		readOnly: true,
 		requiresView: false,
 		run() {
