@@ -78,6 +78,18 @@ describe("failures", () => {
 		);
 	});
 
+	it("mapeia os erros da câmera", () => {
+		expect(messageKeyFor({ name: "NotAllowedError" })).toBe(
+			"pair pc camera denied",
+		);
+		expect(messageKeyFor({ name: "NotFoundError" })).toBe(
+			"pair pc camera unavailable",
+		);
+		expect(messageKeyFor({ name: "NotReadableError" })).toBe(
+			"pair pc camera unavailable",
+		);
+	});
+
 	it("convite inválido tem a sua mensagem; erro desconhecido não tem", () => {
 		const invalid = new InvalidInvitationError(InvitationProblem.INVALID_CODE);
 		expect(messageKeyFor(invalid)).toBe("pair pc invalid invitation");
