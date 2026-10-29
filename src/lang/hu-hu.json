@@ -887,5 +887,20 @@
 	"settings-info-editor-wrapping-indent": "Válassza ki, hogy a tördelt szövegek a képernyő bal szélétől kezdődjenek-e, az eredeti sor behúzását kövessék-e, vagy még jobban legyenek-e behúzva. Minden további behúzási szint a tabulátor méretét veszi alapul.",
 	"icon pack": "Ikoncsomag",
 	"settings-info-icon-pack": "Válassza ki a fájlokhoz és a mappákhoz használandó ikonokat a fájlkezelőben és az alkalmazás egészében megjelenő fájllistákban.",
-	"unavailable": "nem érhető el"
+	"unavailable": "nem érhető el",
+	"pair pc": "Pair with PC",
+	"pair pc default name": "My PC",
+	"pair pc invitation": "Invitation (QR code text)",
+	"pair pc help": "On the PC, start codev-remote-desktop with --pair. Copy the line that starts with Convite: and paste it here, then answer s on the PC to approve this phone.",
+	"pair pc waiting": "Waiting for you to approve this phone on the PC...",
+	"pair pc invalid invitation": "This is not a valid PC invitation. Copy the whole text that starts with codev-pair://.",
+	"pair pc unreachable": "Could not reach the PC. Check that it is on the same Wi-Fi network and that codev-remote-desktop is running with --pair.",
+	"pair pc wrong host": "A device answered, but it is not the PC of this invitation. Nothing was sent to it.",
+	"pair pc code refused": "The PC refused the code. It may have expired or already been used. Start a new pairing on the PC.",
+	"pair pc not approved": "The PC did not approve this phone in time. Start a new pairing and answer s on the PC.",
+	"pair pc sftp failed": "The PC approved this phone, but could not open its folders.",
+	"pair pc scan qr": "Scan the QR code with the camera",
+	"pair pc scanning": "Point the camera at the QR code shown on the PC",
+	"pair pc camera denied": "Camera access was denied. Allow it in the Android settings for this app, or paste the invitation text.",
+	"pair pc camera unavailable": "Could not open the camera. Paste the invitation text instead."
 }

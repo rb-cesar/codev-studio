@@ -47,6 +47,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.charset.StandardCharsets;
 import java.security.Security;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -77,6 +79,8 @@ public class Sftp extends CordovaPlugin {
   private static final long DEFAULT_CONNECT_TIMEOUT_MS = 10000L;
   private static final long MIN_CONNECT_TIMEOUT_MS = 1000L;
   private static final long MAX_CONNECT_TIMEOUT_MS = 30000L;
+  // The PC waits up to 2 minutes for its owner to approve a new phone.
+  private static final long PAIRING_APPROVAL_TIMEOUT_MS = 150000L;
   private static boolean cryptoProviderConfigured;
   private final Object connectionLock = new Object();
   private final Map<String, ConnectionAttempt> connectionAttempts =
@@ -121,6 +125,10 @@ public class Sftp extends CordovaPlugin {
     }
 
     private void success(String value) {
+      if (completed.compareAndSet(false, true)) callback.success(value);
+    }
+
+    private void success(JSONObject value) {
       if (completed.compareAndSet(false, true)) callback.success(value);
     }
 
@@ -964,6 +972,7 @@ public class Sftp extends CordovaPlugin {
       case "connectUsingProfile":
       case "testProfile":
       case "cancelConnection":
+      case "pairWithPc":
       case "saveProfile":
       case "editProfile":
       case "getProfileInfo":
@@ -995,6 +1004,105 @@ public class Sftp extends CordovaPlugin {
 
   public void testProfile(JSONArray args, CallbackContext callback) {
     startProfileConnection(args, callback, true);
+  }
+
+  /**
+   * Pairs this phone with a PC running codev-remote-desktop, using the data of
+   * its QR code. On success the encrypted profile and the trusted PC key are
+   * saved and the profile info is returned.
+   * args: requestId, [{host, port}, ...], PC fingerprint, 6-digit code
+   */
+  public void pairWithPc(JSONArray args, CallbackContext callback) {
+    String requestID = args.optString(0);
+    ConnectionAttempt attempt = new ConnectionAttempt(callback);
+    if (
+      requestID.isEmpty() || connectionAttempts.putIfAbsent(requestID, attempt) != null
+    ) {
+      callback.error("A pairing request ID that is not already running is required");
+      return;
+    }
+
+    FutureTask<Void> task = new FutureTask<Void>(
+      () -> {
+        try {
+          PcPairing.Paired paired = PcPairing.pair(
+            pcEndpoints(args.getJSONArray(1)),
+            args.getString(2),
+            args.getString(3),
+            DEFAULT_CONNECT_TIMEOUT_MS,
+            PAIRING_APPROVAL_TIMEOUT_MS,
+            Sftp::configureClient,
+            attempt::isCancelled
+          );
+          if (attempt.isCancelled()) return null;
+          attempt.success(savePairedPc(paired));
+        } catch (PcPairing.PairingException e) {
+          if (!attempt.isCancelled()) attempt.error(pairingFailure(e));
+        } catch (Exception e) {
+          if (!attempt.isCancelled()) {
+            attempt.error("Could not pair with the PC: " + errMessage(e));
+          }
+          Log.e(TAG, "Could not pair with the PC", e);
+        }
+        return null;
+      }
+    ) {
+      @Override
+      protected void done() {
+        connectionAttempts.remove(requestID, attempt);
+      }
+    };
+
+    attempt.setFuture(task);
+    cordova.getThreadPool().execute(task);
+  }
+
+  private static List<PcPairing.Endpoint> pcEndpoints(JSONArray endpoints)
+    throws JSONException {
+    List<PcPairing.Endpoint> result = new ArrayList<>();
+    for (int index = 0; index < endpoints.length(); index++) {
+      JSONObject endpoint = endpoints.getJSONObject(index);
+      result.add(
+        new PcPairing.Endpoint(endpoint.getString("host"), endpoint.getInt("port"))
+      );
+    }
+    return result;
+  }
+
+  /** Trust the PC's key first, so a saved profile never has to ask about it. */
+  private JSONObject savePairedPc(PcPairing.Paired paired) throws Exception {
+    SshPublicKey hostKey = paired.hostKey;
+    String hostname = paired.endpoint.host;
+    securityStore.trustHost(
+      hostname + ":" + paired.endpoint.port,
+      hostKey.getAlgorithm(),
+      hostKey.getFingerprint(),
+      Base64.encodeToString(hostKey.getEncoded(), Base64.NO_WRAP)
+    );
+
+    JSONObject profile = new JSONObject();
+    profile.put("hostname", hostname);
+    profile.put("port", paired.endpoint.port);
+    profile.put("username", PcPairing.PAIRED_USERNAME);
+    profile.put("authType", "key");
+    profile.put(
+      "privateKey",
+      Base64.encodeToString(
+        paired.privateKey.getBytes(StandardCharsets.UTF_8),
+        Base64.NO_WRAP
+      )
+    );
+    profile.put("passphrase", "");
+    return profileInfo(securityStore.saveProfile(null, profile), profile);
+  }
+
+  private static JSONObject pairingFailure(PcPairing.PairingException failure) {
+    JSONObject error = new JSONObject();
+    try {
+      error.put("code", "PC_PAIRING_" + failure.failure.name());
+      error.put("message", failure.getMessage());
+    } catch (JSONException ignored) {}
+    return error;
   }
 
   public void cancelConnection(JSONArray args, CallbackContext callback) {

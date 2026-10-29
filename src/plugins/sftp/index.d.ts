@@ -46,6 +46,13 @@ interface Sftp {
   testProfile(profileId: String, requestId: String, timeout: Number, onSuccess: (home: String) => void, onFail: (err: any) => void): void;
   /** Cancels an in-flight profile connection or test. */
   cancelConnection(requestId: String, onSuccess: () => void, onFail: (err: any) => void): void;
+  /**
+   * Pairs this phone with a PC running codev-remote-desktop (data from its QR code).
+   * Waits for the PC owner to approve; on success the encrypted profile is saved.
+   * Failures carry `code`: PC_PAIRING_UNREACHABLE, _HOST_KEY_MISMATCH, _CODE_REFUSED,
+   * _NOT_APPROVED, _SFTP_FAILED or SFTP_CONNECT_CANCELLED (see cancelConnection).
+   */
+  pairWithPc(requestId: String, endpoints: {host: String, port: Number}[], fingerprint: String, code: String, onSuccess: (profile: SftpProfileInfo & {profileId: string}) => void, onFail: (err: any) => void): void;
   saveProfile(profileId: String | null, host: String, port: Number, username: String, authType: String, password: String, keyFile: String, passphrase: String, onSuccess: (profileId: String) => void, onFail: (err: any) => void): void;
   editProfile(profileId: String | null, host: String, port: Number, username: String, authType: String, password: String, keyFile: String, passphrase: String, onSuccess: (profile: SftpProfileInfo & {profileId: string}) => void, onFail: (err: any) => void): void;
   getProfileInfo(profileId: String, onSuccess: (profile: SftpProfileInfo & {profileId: string}) => void, onFail: (err: any) => void): void;
